@@ -56,3 +56,17 @@ Python 3.12, managed with `uv`. Linting `ruff`, typechecking `ty`. MCP via `fast
 ## Licenses
 
 Code: Apache 2.0. Data (embeddings plus stored explainxkcd text): CC BY-SA 3.0. Attribution is delivered via the `url` field in every search result.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical role labels, each string equal to its name: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
