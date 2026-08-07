@@ -281,37 +281,37 @@ wheels = [
 
 [package.optional-dependencies]
 cublas = [
-    { name = "nvidia-cublas", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cublas" },
 ]
 cudart = [
-    { name = "nvidia-cuda-runtime", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cuda-runtime" },
 ]
 cufft = [
-    { name = "nvidia-cufft", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cufft" },
 ]
 cufile = [
-    { name = "nvidia-cufile", marker = "sys_platform == 'linux'" },
+    { name = "nvidia-cufile" },
 ]
 cupti = [
-    { name = "nvidia-cuda-cupti", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cuda-cupti" },
 ]
 curand = [
-    { name = "nvidia-curand", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-curand" },
 ]
 cusolver = [
-    { name = "nvidia-cusolver", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cusolver" },
 ]
 cusparse = [
-    { name = "nvidia-cusparse", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cusparse" },
 ]
 nvjitlink = [
-    { name = "nvidia-nvjitlink", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-nvjitlink" },
 ]
 nvrtc = [
-    { name = "nvidia-cuda-nvrtc", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-cuda-nvrtc" },
 ]
 nvtx = [
-    { name = "nvidia-nvtx", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "nvidia-nvtx" },
 ]
 
 [[package]]
@@ -2226,12 +2226,12 @@ dependencies = [
     { name = "httpx" },
     { name = "sentence-transformers" },
     { name = "sqlite-vec" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
 builder = [
     { name = "mwparserfromhell" },
-    { name = "tenacity" },
 ]
 dev = [
     { name = "pytest" },
@@ -2246,13 +2246,11 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "sentence-transformers", specifier = ">=5.4.1" },
     { name = "sqlite-vec", specifier = ">=0.1.9" },
+    { name = "tenacity", specifier = ">=9.0.0" },
 ]
 
 [package.metadata.requires-dev]
-builder = [
-    { name = "mwparserfromhell", specifier = ">=0.7.2" },
-    { name = "tenacity", specifier = ">=9.0.0" },
-]
+builder = [{ name = "mwparserfromhell", specifier = ">=0.7.2" }]
 dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
