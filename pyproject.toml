@@ -10,10 +10,12 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=3.2.4",
+    "gradio>=6.22.0",
     "httpx>=0.28.1",
     "sentence-transformers>=5.4.1",
     "sqlite-vec>=0.1.9",
     "tenacity>=9.0.0",
+    "torch>=2.11.0",
 ]
 
 [project.urls]
@@ -26,6 +28,16 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "xkcd_search"
+
+[tool.uv.sources]
+# torch is used CPU-only (dev machines and the HF Space run without a GPU);
+# pulling the CPU build keeps the venv and the Docker image small.
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 line-length = 100

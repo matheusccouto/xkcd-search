@@ -6,6 +6,7 @@ Remote MCP server exposing a single tool, `search_xkcd`, for semantic search ove
 
 - `src/xkcd_search/server.py` FastMCP server, `search_xkcd` tool, boot-time download
 - `src/xkcd_search/builder.py` HTTP fetchers, chunker, embeddings, SQLite upsert, nightly `__main__`
+- `src/xkcd_search/search_app.py` Gradio search app: `search_cards`/`ComicCard` seam, `render_cards`, `build_ui`
 - `src/xkcd_search/schema.sql` sqlite-vec schema
 - `tests/` pytest-asyncio integration tests (in-process or cloud via `XKCD_TEST_URL`)
 - `.github/workflows/index-daily.yml` daily build, publish, redeploy
