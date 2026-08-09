@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from xkcd_search import server
 from xkcd_search.builder import open_connection
-from xkcd_search.search_app import ComicCard, render_cards, search_cards
+from xkcd_search.search_app import ComicCard, build_ui, render_cards, search_cards
 
 
 def test_search_cards_returns_ranked_comic_cards(built_index):
@@ -69,3 +69,42 @@ def test_render_cards_renders_every_card_field(built_index):
     assert "#3230" in html
     assert 'class="xkcd-alt"' in html
     assert "Overton window" in html
+
+
+def _layout_order(ui) -> list[int]:
+    """Component ids in document order from the Blocks layout tree."""
+    order: list[int] = []
+
+    def walk(node: dict) -> None:
+        order.append(node["id"])
+        for child in node.get("children", []):
+            walk(child)
+
+    walk(ui.config["layout"])
+    return order
+
+
+def _component_id(ui, ctype: str, *, label: str | None = None, value: str | None = None) -> int:
+    for c in ui.config["components"]:
+        if c.get("type") != ctype:
+            continue
+        props = c.get("props", {})
+        if label is not None and props.get("label") != label:
+            continue
+        if value is not None and props.get("value") != value:
+            continue
+        return c["id"]
+    raise AssertionError(f"no {ctype} component with label={label!r} value={value!r} found")
+
+
+def test_search_button_sits_before_results():
+    """The Search button must sit with the query box, above the Results output.
+
+    If the button renders after the results, tall cards push it to the bottom of
+    the page and every new search starts with a scroll back up.
+    """
+    ui = build_ui()
+    order = _layout_order(ui)
+    button_id = _component_id(ui, "button", value="Search")
+    output_id = _component_id(ui, "html", label="Results")
+    assert order.index(button_id) < order.index(output_id)

@@ -83,13 +83,15 @@ def build_ui():
 
     with gr.Blocks(title="xkcd-search") as ui:
         gr.Markdown(f"# xkcd-search\nDescribe a comic and see up to {MAX_CARDS} matches.")
-        query = gr.Textbox(
-            label="Query",
-            placeholder="e.g. a comic about the overton window",
-            lines=2,
-        )
+        with gr.Row():
+            query = gr.Textbox(
+                label="Query",
+                placeholder="e.g. a comic about the overton window",
+                lines=2,
+                scale=4,
+            )
+            submit = gr.Button("Search", variant="primary", scale=1)
         output = gr.HTML(label="Results")
-        submit = gr.Button("Search", variant="primary")
         submit.click(render_cards, inputs=query, outputs=output)
         query.submit(render_cards, inputs=query, outputs=output)
     return ui
