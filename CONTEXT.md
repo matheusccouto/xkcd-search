@@ -36,3 +36,19 @@ _Avoid_: frontend, dashboard
 **MCP endpoint**:
 The machine-facing surface at `/mcp` where MCP clients call the search tool.
 _Avoid_: API, server
+
+**Eval set**:
+A committed list of `(query, expected comic)` pairs used to measure retrieval quality; generated once from sampled comics' explanations and stored as `eval_set.json`.
+_Avoid_: benchmark, test data
+
+**Expected comic**:
+The comic an eval-set query is written to retrieve; the ground truth the eval checks for.
+_Avoid_: gold answer, answer
+
+**hit@k**:
+The fraction of eval-set queries whose expected comic appears in the top-k results; reported at k=1 and k=5.
+_Avoid_: recall@k
+
+**MRR**:
+Mean reciprocal rank of the expected comic across the eval set; a higher-first placement is better even when the comic is not in the top-k.
+_Avoid_: average rank

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from xkcd_search.evals import EvalQuery, hit_at_k, load_eval_set, mrr, run_eval
+from xkcd_search.evals import EVAL_SET_PATH, EvalQuery, hit_at_k, load_eval_set, mrr, run_eval
 
 
 def test_hit_at_1_true_when_expected_is_first():
@@ -58,6 +58,14 @@ def test_load_eval_set_parses_committed_shape(tmp_path):
     path.write_text(json.dumps({"queries": [{"query": "overton window", "expected_number": 3230}]}))
     queries = load_eval_set(path)
     assert queries == [EvalQuery(query="overton window", expected_number=3230)]
+
+
+def test_committed_eval_set_has_forty_queries_with_unique_expected_comics():
+    queries = load_eval_set(EVAL_SET_PATH)
+    assert len(queries) == 40
+    expected = [q.expected_number for q in queries]
+    assert len(set(expected)) == len(expected), "expected comic must be unique per query"
+    assert all(q.query.strip() for q in queries)
 
 
 def _stub_retriever(rankings: dict[str, list[int]]):
