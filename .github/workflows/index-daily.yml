@@ -62,6 +62,10 @@ jobs:
             exit 1
           fi
 
+      - name: Run evals (report-only)
+        continue-on-error: true
+        run: uv run evals --index ~/.cache/xkcd-search/index.sqlite
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
