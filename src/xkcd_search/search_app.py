@@ -44,7 +44,7 @@ _CARD_STYLE = (
     "<style>"
     ".xkcd-cards{display:flex;flex-direction:column;gap:1.25rem;}"
     ".xkcd-card{border:1px solid #ddd;border-radius:8px;padding:.5rem;text-align:center;}"
-    ".xkcd-card img{max-width:100%;border-radius:6px;}"
+    ".xkcd-card img{display:block;max-width:100%;margin:0 auto;border-radius:6px;}"
     "</style>"
 )
 
