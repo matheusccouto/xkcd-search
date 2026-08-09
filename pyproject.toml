@@ -18,6 +18,9 @@ dependencies = [
     "torch>=2.11.0",
 ]
 
+[project.scripts]
+evals = "xkcd_search.evals:main"
+
 [project.urls]
 Homepage = "https://github.com/matheusccouto/xkcd-search-mcp"
 Repository = "https://github.com/matheusccouto/xkcd-search-mcp"
