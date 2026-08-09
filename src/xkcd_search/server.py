@@ -11,6 +11,7 @@ app at `/` into one ASGI app; the deployed boot path runs that composed app.
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import sys
@@ -21,30 +22,57 @@ from starlette.types import ASGIApp
 
 from xkcd_search.builder import INDEX_PATH, encode, new_client, open_connection, query_top_k
 
-GITHUB_REPO = "matheusccouto/xkcd-search-mcp"
-RELEASES_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+LOGGER = logging.getLogger(__name__)
+
+GITHUB_REPO = "matheusccouto/xkcd-search"
+RELEASE_ASSET_URL = f"https://github.com/{GITHUB_REPO}/releases/latest/download/index.sqlite"
 
 mcp = FastMCP("xkcd-search")
 _conn: sqlite3.Connection | None = None
 
 
 def _download_index() -> None:
-    """Fetch the latest `index.sqlite` Release asset into INDEX_PATH."""
-    with new_client(timeout=60.0, follow_redirects=True) as client:
-        resp = client.get(RELEASES_API)
-        resp.raise_for_status()
-        for asset in resp.json().get("assets", []):
-            if asset.get("name") == "index.sqlite":
-                INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-                tmp = INDEX_PATH.with_suffix(".tmp")
-                with client.stream("GET", asset["browser_download_url"]) as r:
-                    r.raise_for_status()
-                    with tmp.open("wb") as f:
-                        for chunk in r.iter_bytes(1 << 20):
-                            f.write(chunk)
-                tmp.rename(INDEX_PATH)
-                return
-        raise RuntimeError(f"no 'index.sqlite' asset in latest release of {GITHUB_REPO}")
+    """Fetch the latest `index.sqlite` Release asset into INDEX_PATH.
+
+    Downloads straight from the `releases/latest/download/...` URL instead of
+    the GitHub API: the unauthenticated API rate-limits per-IP (60/hour), which
+    the shared egress IP of an HF Space exhausts quickly. The direct URL streams
+    from the asset CDN and is not rate-limited.
+    """
+    INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = INDEX_PATH.with_suffix(".tmp")
+    try:
+        with (
+            new_client(timeout=120.0, follow_redirects=True) as client,
+            client.stream("GET", RELEASE_ASSET_URL) as r,
+            tmp.open("wb") as f,
+        ):
+            r.raise_for_status()
+            for chunk in r.iter_bytes(1 << 20):
+                f.write(chunk)
+        tmp.rename(INDEX_PATH)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _bootstrap() -> sqlite3.Connection:
+    """Open the index read-only, downloading it first when missing.
+
+    A failed download never crashes boot: the server comes up against an empty
+    schema-only index so the Space stays reachable, and the nightly rebuild's
+    redeploy replaces it with a fresh asset.
+    """
+    if INDEX_PATH.exists():
+        return open_connection(INDEX_PATH, read_only=True)
+    try:
+        _download_index()
+    except Exception:
+        LOGGER.exception(
+            "index download failed (%s); booting with an empty index", RELEASE_ASSET_URL
+        )
+    if not INDEX_PATH.exists():
+        open_connection(INDEX_PATH)
+    return open_connection(INDEX_PATH, read_only=True)
 
 
 @mcp.tool
@@ -98,6 +126,4 @@ def build_app() -> ASGIApp:
 
 
 if "pytest" not in sys.modules and os.getenv("XKCD_SKIP_BOOTSTRAP") != "1":
-    if not INDEX_PATH.exists():
-        _download_index()
-    _conn = open_connection(INDEX_PATH, read_only=True)
+    _conn = _bootstrap()
