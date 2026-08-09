@@ -4,6 +4,9 @@ On boot, downloads the latest `index.sqlite` GitHub Release asset and opens a
 read-only SQLite connection. No polling: the nightly indexer publishes a new
 Release and calls the HF Spaces restart API, which restarts this process and
 re-downloads the fresh artifact.
+
+`build_app()` composes this MCP endpoint at `/mcp` together with the search
+app at `/` into one ASGI app; the deployed boot path runs that composed app.
 """
 
 from __future__ import annotations
@@ -14,8 +17,7 @@ import sys
 from typing import Any
 
 from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import HTMLResponse
+from starlette.types import ASGIApp
 
 from xkcd_search.builder import INDEX_PATH, encode, new_client, open_connection, query_top_k
 
@@ -68,43 +70,34 @@ def search_xkcd(query: str, k: int = 5) -> list[dict[str, Any]]:
     return [dict(by_number[n]) for n in numbers if n in by_number]
 
 
-LANDING_HTML = """<!DOCTYPE html>
-<html>
-<head>
-<title>xkcd-search MCP</title>
-<style>
-body{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px}
-h1{color:#1a1a2e}code{background:#f4f4f4;padding:2px 6px;border-radius:4px}
-.endpoint{color:#e94560;font-weight:bold}
-</style>
-</head>
-<body>
-<h1>🔎 xkcd-search MCP</h1>
-<p>Semantic search for xkcd comics via MCP.</p>
-<h2>Endpoint</h2>
-<p><code class="endpoint">https://couto-xkcd-search.hf.space/mcp</code></p>
-<h2>Connect</h2>
-<p>Add to your MCP client config:</p>
-<pre>{"mcpServers":{"xkcd-search":{"url":"https://couto-xkcd-search.hf.space/mcp"}}}</pre>
-<p><a href="https://github.com/matheusccouto/xkcd-search-mcp">GitHub</a></p>
-</body>
-</html>"""
+def build_app() -> ASGIApp:
+    """Compose the search app at `/` and the MCP endpoint at `/mcp` into one ASGI app.
 
+    Reuses the module-level `mcp` object and index connection. `gradio` is
+    imported only here, so server boot and the MCP test suite never pay its
+    import cost.
+    """
+    import gradio as gr
+    from fastapi import FastAPI
+    from starlette.routing import Route
 
-@mcp.custom_route("/", methods=["GET"])
-async def landing(request: Request) -> HTMLResponse:
-    """Landing page for browsers."""
-    accept = request.headers.get("accept", "")
-    if "text/html" in accept:
-        return HTMLResponse(LANDING_HTML)
-    return HTMLResponse(status_code=406)
+    from xkcd_search.search_app import build_ui
+
+    mcp_http_app = mcp.http_app(path="/mcp")
+    ui = build_ui()
+    app = FastAPI(
+        lifespan=mcp_http_app.lifespan,
+        docs_url=None,
+        openapi_url=None,
+        redoc_url=None,
+    )
+    # Register /mcp before mount_gradio_app mounts at "/": the "/" mount matches
+    # every path, so only registration order gives /mcp precedence.
+    app.router.routes.append(Route("/mcp", endpoint=mcp_http_app))
+    return gr.mount_gradio_app(app, ui, path="/")
 
 
 if "pytest" not in sys.modules and os.getenv("XKCD_SKIP_BOOTSTRAP") != "1":
     if not INDEX_PATH.exists():
         _download_index()
     _conn = open_connection(INDEX_PATH, read_only=True)
-
-
-if __name__ == "__main__":
-    mcp.run(transport="http", host="0.0.0.0", port=int(os.getenv("PORT", "7860")), path="/mcp")

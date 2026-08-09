@@ -4,7 +4,8 @@ Remote MCP server exposing a single tool, `search_xkcd`, for semantic search ove
 
 ## Layout
 
-- `src/xkcd_search/server.py` FastMCP server, `search_xkcd` tool, boot-time download
+- `src/xkcd_search/server.py` FastMCP server, `search_xkcd` tool, `build_app()` composition seam, boot-time download
+- `src/xkcd_search/app.py` composed deployment entry (`python -m xkcd_search.app`): runs `build_app()` under uvicorn
 - `src/xkcd_search/builder.py` HTTP fetchers, chunker, embeddings, SQLite upsert, nightly `__main__`
 - `src/xkcd_search/search_app.py` Gradio search app: `search_cards`/`ComicCard` seam, `render_cards`, `build_ui`
 - `src/xkcd_search/schema.sql` sqlite-vec schema
@@ -22,6 +23,7 @@ Python 3.12, managed with `uv`. Linting `ruff`, typechecking `ty`. MCP via `fast
 - `XKCD_TEST_URL=https://couto-xkcd-search.hf.space/mcp uv run pytest tests/test_server.py` run the same suite against the live HF Space endpoint
 - `uv run ruff check . && uv run ruff format --check . && uv run ty check` lint plus typecheck
 - `uv run python -m xkcd_search.builder` rebuild the index locally (full run, no limit flag)
+- `uv run python -m xkcd_search.app` run the composed app (search UI at `/`, MCP at `/mcp`)
 - `uv run fastmcp dev src/xkcd_search/server.py` open the FastMCP inspector
 
 <important if="you are writing or modifying tests">

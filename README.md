@@ -47,8 +47,9 @@ referencing a comic.
 4. The artifact is published as the `index.sqlite` asset on the repo's latest
    GitHub Release, and the workflow calls the Hugging Face Spaces restart API
    to trigger a rebuild.
-5. The FastMCP server downloads that asset on boot. Queries run locally
-   against the SQLite file; there is no background polling.
+5. The composed app (`python -m xkcd_search.app`) downloads that asset on boot
+   and serves the search app at `/` next to the MCP endpoint at `/mcp`. Queries
+   run locally against the SQLite file; there is no background polling.
 
 There is no hosted database and no API key anywhere in the stack.
 
@@ -58,6 +59,7 @@ There is no hosted database and no API key anywhere in the stack.
 uv sync
 uv run pytest                                   # integration tests (in-process)
 uv run python -m xkcd_search.builder            # build a local index.sqlite (slow)
+uv run python -m xkcd_search.app                # run the composed app (search UI at /, MCP at /mcp)
 uv run fastmcp dev src/xkcd_search/server.py    # open the FastMCP inspector
 ```
 

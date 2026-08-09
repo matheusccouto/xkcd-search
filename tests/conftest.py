@@ -60,3 +60,18 @@ async def mcp_client(built_index) -> AsyncIterator[Client]:
     else:
         async with Client(server.mcp) as c:
             yield c
+
+
+@pytest.fixture
+def composed_app(built_index):
+    """The composed ASGI app: search app at `/`, MCP endpoint at `/mcp`.
+
+    Builds a fresh app per test so each test can run its lifespan inline in its
+    own task. No-op in cloud mode; cloud tests hit the live Space instead.
+    """
+    if os.getenv("XKCD_TEST_URL"):
+        return None
+
+    from xkcd_search.server import build_app
+
+    return build_app()
