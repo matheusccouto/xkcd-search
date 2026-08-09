@@ -68,7 +68,7 @@ async def test_root_serves_the_search_app(composed_app):
     async with _composed_client(composed_app) as client:
         page = await client.get("/")
         assert page.status_code == 200
-        assert "xkcd-search" in page.text
+        assert "xkcd search" in page.text
 
         config = await client.get("/config")
         assert config.status_code == 200

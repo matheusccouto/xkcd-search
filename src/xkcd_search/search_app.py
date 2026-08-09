@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from xkcd_search import server
 
 MAX_CARDS = 5
+MAX_TOP_K = 20
 
 
 @dataclass(frozen=True)
@@ -49,14 +50,14 @@ _CARD_STYLE = (
 )
 
 
-def render_cards(query: str) -> str:
+def render_cards(query: str, k: int = MAX_CARDS) -> str:
     """Render the HTML for `query`: comic cards, or a no-comics-found message.
 
     An empty query is a no-op and renders nothing.
     """
     if not query.strip():
         return ""
-    cards = search_cards(query, k=MAX_CARDS)
+    cards = search_cards(query, k=int(k))
     if not cards:
         return '<p class="xkcd-empty">no comics found</p>'
     card_html = "\n".join(_card_html(card) for card in cards)
@@ -81,19 +82,25 @@ def build_ui():
     """Build the Gradio UI: a text input whose submit renders comic cards."""
     import gradio as gr
 
-    with gr.Blocks(title="xkcd-search") as ui:
-        gr.Markdown(f"# xkcd-search\nDescribe a comic and see up to {MAX_CARDS} matches.")
+    with gr.Blocks(title="xkcd search") as ui:
+        gr.Markdown("# xkcd search\nDescribe a comic and search the archive.")
+        query = gr.Textbox(
+            label="Query",
+            placeholder="e.g. a comic about the overton window",
+            lines=2,
+        )
         with gr.Row():
-            query = gr.Textbox(
-                label="Query",
-                placeholder="e.g. a comic about the overton window",
-                lines=2,
-                scale=4,
+            k_input = gr.Number(
+                label="Number of comics (K)",
+                value=MAX_CARDS,
+                minimum=1,
+                maximum=MAX_TOP_K,
+                precision=0,
             )
-            submit = gr.Button("Search", variant="primary", scale=1)
+            submit = gr.Button("Search", variant="primary")
         output = gr.HTML(label="Results")
-        submit.click(render_cards, inputs=query, outputs=output)
-        query.submit(render_cards, inputs=query, outputs=output)
+        submit.click(render_cards, inputs=[query, k_input], outputs=output)
+        query.submit(render_cards, inputs=[query, k_input], outputs=output)
     return ui
 
 

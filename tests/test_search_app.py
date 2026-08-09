@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from xkcd_search import server
 from xkcd_search.builder import open_connection
-from xkcd_search.search_app import ComicCard, build_ui, render_cards, search_cards
+from xkcd_search.search_app import MAX_CARDS, ComicCard, build_ui, render_cards, search_cards
 
 
 def test_search_cards_returns_ranked_comic_cards(built_index):
@@ -97,6 +97,11 @@ def _component_id(ui, ctype: str, *, label: str | None = None, value: str | None
     raise AssertionError(f"no {ctype} component with label={label!r} value={value!r} found")
 
 
+def test_render_cards_respects_k(built_index):
+    assert render_cards("overton window politics", k=1).count('class="xkcd-card"') == 1
+    assert render_cards("overton window politics", k=2).count('class="xkcd-card"') == 2
+
+
 def test_search_button_sits_before_results():
     """The Search button must sit with the query box, above the Results output.
 
@@ -108,3 +113,14 @@ def test_search_button_sits_before_results():
     button_id = _component_id(ui, "button", value="Search")
     output_id = _component_id(ui, "html", label="Results")
     assert order.index(button_id) < order.index(output_id)
+
+
+def test_k_input_defaults_to_max_cards():
+    """The K number input must exist, default to MAX_CARDS, and cap at 20."""
+    ui = build_ui()
+    k_id = _component_id(ui, "number", label="Number of comics (K)")
+    props = next(c for c in ui.config["components"] if c["id"] == k_id)["props"]
+    assert props["value"] == MAX_CARDS
+    assert props["minimum"] == 1
+    assert props["maximum"] == 20
+    assert props["precision"] == 0
