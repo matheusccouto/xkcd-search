@@ -42,16 +42,15 @@ def search_cards(query: str, k: int = MAX_CARDS) -> list[ComicCard]:
 
 _CARD_STYLE = (
     "<style>"
-    ".xkcd-cards{display:flex;flex-direction:column;gap:1.5rem;}"
-    ".xkcd-card{border:1px solid #ddd;border-radius:8px;padding:1rem;}"
+    ".xkcd-cards{display:flex;flex-direction:column;gap:1.25rem;}"
+    ".xkcd-card{border:1px solid #ddd;border-radius:8px;padding:.5rem;text-align:center;}"
     ".xkcd-card img{max-width:100%;border-radius:6px;}"
-    ".xkcd-alt{color:#555;}"
     "</style>"
 )
 
 
 def render_cards(query: str, k: int = MAX_CARDS) -> str:
-    """Render the HTML for `query`: comic cards, or a no-comics-found message.
+    """Render the HTML for `query`: clickable comic images, or a no-comics message.
 
     An empty query is a no-op and renders nothing.
     """
@@ -67,13 +66,10 @@ def render_cards(query: str, k: int = MAX_CARDS) -> str:
 def _card_html(card: ComicCard) -> str:
     url = html.escape(card.url, quote=True)
     image_url = html.escape(card.image_url, quote=True)
-    title = html.escape(card.title)
     alt_text = html.escape(card.alt_text)
     return (
         '<div class="xkcd-card">'
         f'<a href="{url}"><img src="{image_url}" alt="{alt_text}" loading="lazy"></a>'
-        f'<h3><a href="{url}">{title}</a> (#{card.number})</h3>'
-        f'<p class="xkcd-alt">{alt_text}</p>'
         "</div>"
     )
 
@@ -83,21 +79,23 @@ def build_ui():
     import gradio as gr
 
     with gr.Blocks(title="xkcd search") as ui:
-        gr.Markdown("# xkcd search\nDescribe a comic and search the archive.")
-        query = gr.Textbox(
-            label="Query",
-            placeholder="e.g. a comic about the overton window",
-            lines=2,
-        )
+        gr.Markdown("# xkcd search")
         with gr.Row():
+            query = gr.Textbox(
+                label="Query",
+                placeholder="e.g. a comic about the overton window",
+                lines=2,
+                scale=4,
+            )
             k_input = gr.Number(
-                label="Number of comics (K)",
+                label="Number of comics",
                 value=MAX_CARDS,
                 minimum=1,
                 maximum=MAX_TOP_K,
                 precision=0,
+                scale=1,
             )
-            submit = gr.Button("Search", variant="primary")
+        submit = gr.Button("Search", variant="primary")
         output = gr.HTML(label="Results")
         submit.click(render_cards, inputs=[query, k_input], outputs=output)
         query.submit(render_cards, inputs=[query, k_input], outputs=output)

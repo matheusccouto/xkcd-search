@@ -61,14 +61,14 @@ def test_render_cards_no_matches_message(tmp_path, monkeypatch):
         read_conn.close()
 
 
-def test_render_cards_renders_every_card_field(built_index):
+def test_render_cards_renders_clickable_image_only(built_index):
     html = render_cards("overton window politics")
-    assert 'href="https://xkcd.com/3230/"' in html
     assert "<img" in html
-    assert ">Overton</a>" in html
-    assert "#3230" in html
-    assert 'class="xkcd-alt"' in html
-    assert "Overton window" in html
+    assert "src=" in html
+    assert 'href="https://xkcd.com/3230/"' in html
+    assert ">Overton</a>" not in html
+    assert "#3230" not in html
+    assert 'class="xkcd-alt"' not in html
 
 
 def _layout_order(ui) -> list[int]:
@@ -116,11 +116,40 @@ def test_search_button_sits_before_results():
 
 
 def test_k_input_defaults_to_max_cards():
-    """The K number input must exist, default to MAX_CARDS, and cap at 20."""
+    """The number input must exist, default to MAX_CARDS, and cap at 20."""
     ui = build_ui()
-    k_id = _component_id(ui, "number", label="Number of comics (K)")
+    k_id = _component_id(ui, "number", label="Number of comics")
     props = next(c for c in ui.config["components"] if c["id"] == k_id)["props"]
     assert props["value"] == MAX_CARDS
     assert props["minimum"] == 1
     assert props["maximum"] == 20
     assert props["precision"] == 0
+
+
+def _parent_id(ui, node_id: int) -> int | None:
+    """The id of the layout node that directly contains `node_id`."""
+
+    def walk(node: dict) -> int | None:
+        if any(child["id"] == node_id for child in node.get("children", [])):
+            return node["id"]
+        for child in node.get("children", []):
+            found = walk(child)
+            if found is not None:
+                return found
+        return None
+
+    return walk(ui.config["layout"])
+
+
+def test_query_and_k_share_a_row_above_the_button():
+    """Query + number-of-comics sit on one row, the Search button spans its own
+    row below, and the results render after that."""
+    ui = build_ui()
+    query_id = _component_id(ui, "textbox", label="Query")
+    k_id = _component_id(ui, "number", label="Number of comics")
+    button_id = _component_id(ui, "button", value="Search")
+    output_id = _component_id(ui, "html", label="Results")
+    assert _parent_id(ui, query_id) == _parent_id(ui, k_id)
+    assert _parent_id(ui, button_id) != _parent_id(ui, query_id)
+    order = _layout_order(ui)
+    assert order.index(query_id) < order.index(button_id) < order.index(output_id)
