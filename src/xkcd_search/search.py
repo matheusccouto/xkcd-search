@@ -18,7 +18,7 @@ class SearchEngine:
 
     def __init__(self, table: lancedb.table.Table | None = None) -> None:
         """Initialize search engine with optional pre-connected table."""
-        self.table = table or self._connect()
+        self.table = table if table is not None else self._connect()
 
     @staticmethod
     def _connect() -> lancedb.table.Table:
