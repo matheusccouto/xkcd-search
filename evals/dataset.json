@@ -1,0 +1,110 @@
+[
+  {
+    "comic_number": 353,
+    "title": "Python",
+    "queries": [
+      "programming language where importing a module makes you fly",
+      "leaving perl for something cleaner i wrote 20 scripts yesterday",
+      "dynamic typing giving human flight antigravity"
+    ]
+  },
+  {
+    "comic_number": 327,
+    "title": "Exploits of a Mom",
+    "queries": [
+      "sanitizing database inputs school records deleted",
+      "mother naming child code that deletes student database table",
+      "little bobby tables sql injection vulnerability"
+    ]
+  },
+  {
+    "comic_number": 3230,
+    "title": "Overton",
+    "queries": [
+      "political range of acceptable ideas grave dates moving",
+      "gravestone where death year keeps getting crossed out and updated",
+      "sunlight shining into bedroom earlier in the morning due to season"
+    ]
+  },
+  {
+    "comic_number": 927,
+    "title": "Standards",
+    "queries": [
+      "competing specifications create one universal standard now there are 15",
+      "mini-usb micro-usb charging cable confusion",
+      "situations where everyone invents another protocol to replace the existing ones"
+    ]
+  },
+  {
+    "comic_number": 936,
+    "title": "Password Strength",
+    "queries": [
+      "four random common words easy to remember hard to guess",
+      "correct horse battery staple entropy comparison",
+      "password rules with uppercase numbers symbols are worse than passphrases"
+    ]
+  },
+  {
+    "comic_number": 303,
+    "title": "Compiling",
+    "queries": [
+      "sword fighting in office while waiting for code to finish",
+      "excuse for slacking off while computer is building software",
+      "standing on office chairs with rolling wheels dueling"
+    ]
+  },
+  {
+    "comic_number": 2405,
+    "title": "Flash Gatsby",
+    "queries": [
+      "adobe flash player death public domain classic novel",
+      "excuse for not reading assigned book in high school novel copyright",
+      "midnight deadline when great gatsby enters public domain"
+    ]
+  },
+  {
+    "comic_number": 1852,
+    "title": "Election Map",
+    "queries": [
+      "red vs blue political precincts voting visualization",
+      "geographic land area map misleading for voter population density",
+      "green party precinct coloring interpretation"
+    ]
+  },
+  {
+    "comic_number": 2245,
+    "title": "Edible Arrangements",
+    "queries": [
+      "eating furniture if you are hungry enough fruit bouquet parody",
+      "any arrangement is an edible arrangement",
+      "wooden chairs and coffee table as snacks"
+    ]
+  },
+  {
+    "comic_number": 2224,
+    "title": "Software Updates",
+    "queries": [
+      "ping times vary a lot everything is a cloud application",
+      "updating software on deep space probe millions of miles away",
+      "firmware patch transmitted to spacecraft across solar system"
+    ]
+  },
+  {
+    "comic_number": 3004,
+    "title": "Wells",
+    "queries": [
+      "digging for groundwater and accidentally striking crude oil",
+      "free fuel you can sell for money instead of drinking water",
+      "drilling a hole in the backyard hitting petroleum"
+    ]
+  },
+  {
+    "comic_number": 2733,
+    "title": "Size Comparisons",
+    "queries": [
+      "shrinking solar system to the size of texas",
+      "astronomical scale comparison grasshopper in dallas",
+      "relative distances of planets compared to cities and states"
+    ]
+  }
+]

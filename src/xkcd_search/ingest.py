@@ -123,7 +123,7 @@ def open_or_create_table(path: Path | str) -> lancedb.table.Table:
     """Open existing LanceDB table or create a new one with schema."""
     Path(path).mkdir(parents=True, exist_ok=True)
     db = lancedb.connect(str(path))
-    if "comics" in db.list_tables():
+    if "comics" in db.list_tables().tables:
         return db.open_table("comics")
     return db.create_table("comics", schema=SCHEMA)
 

@@ -110,6 +110,21 @@ uvx ruff check . && uvx ruff format --check . && uvx ty check
 uv run python -m xkcd_search.app
 ```
 
+## Evaluations
+
+Run retrieval quality benchmarks with [DeepEval](https://github.com/confident-ai/deepeval):
+
+```bash
+# Run DeepEval test suite
+uv run deepeval test run evals/test_retrieval.py
+
+# Run benchmark report (Hit@1, Hit@3, Hit@5, MRR)
+uv run python -m evals.test_retrieval
+
+# Sample random comics from explainxkcd into eval corpus
+uv run python -m evals.sampler --count 3 --index
+```
+
 ## Attribution and Licensing
 
 - **explainxkcd**: Content is licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). When citing results, link back to the comic's `url`.

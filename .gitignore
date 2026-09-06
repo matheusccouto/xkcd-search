@@ -2,6 +2,9 @@
 TODO.md
 CLAUDE.local.md
 
+# DeepEval
+.deepeval/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -40,6 +43,8 @@ htmlcov/
 # Built index artifact
 lancedb/
 *.lance/
+evals/data/
+.eval_lance/
 
 # Editor
 .idea/

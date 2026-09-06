@@ -47,6 +47,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+"evals/*" = ["S101", "T201"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -55,6 +56,7 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
+    "deepeval>=2.9.3",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.24",
     "ruff>=0.15.11",
