@@ -112,17 +112,17 @@ uv run python -m xkcd_search.app
 
 ## Evaluations
 
-Run retrieval quality benchmarks with [DeepEval](https://github.com/confident-ai/deepeval):
+Run retrieval quality benchmarks over natural queries against the evaluation corpus:
 
 ```bash
-# Run DeepEval test suite
-uv run deepeval test run evals/test_retrieval.py
+# Run pytest evaluation suite
+uv run pytest evals/
 
 # Run benchmark report (Hit@1, Hit@3, Hit@5, MRR)
 uv run python -m evals.test_retrieval
 
-# Sample random comics from explainxkcd into eval corpus
-uv run python -m evals.sampler --count 3 --index
+# Discover random explainxkcd pages to add new entries to dataset.json
+uv run python -m evals.sampler --count 3
 ```
 
 ## Attribution and Licensing
