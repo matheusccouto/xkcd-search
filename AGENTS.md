@@ -12,8 +12,7 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 ## Layout
 
 - `src/xkcd_search/search.py`: Core retrieval engine (`SearchEngine`), embedding generation, and LanceDB queries.
-- `src/xkcd_search/server.py`: FastMCP server, `search_xkcd` tool, and native REST endpoint (`/api/search`).
-- `src/xkcd_search/app.py`: Gradio web UI (`/`) and ASGI entry point.
+- `src/xkcd_search/app.py`: FastMCP server (`search_xkcd`), REST endpoint (`/api/search`), Gradio web UI (`/`), and ASGI entry point.
 - `src/xkcd_search/ingest.py`: Scraping xkcd + explainxkcd, computing embeddings, and publishing to Hugging Face.
 - `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
 - `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.

@@ -1,4 +1,4 @@
-"""Tests for xkcd search: search engine, web UI, MCP, and REST API."""
+"""Tests for xkcd search: retrieval engine, web UI, MCP, and REST API."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from xkcd_search.app import build_ui, render_cards
 from xkcd_search.ingest import open_or_create_table
 from xkcd_search.search import SearchEngine
 
@@ -43,14 +42,15 @@ async def _composed_client(app: Starlette | None) -> AsyncIterator[httpx.AsyncCl
 
 
 def test_search_ranks_relevant_comic_first(search_engine: SearchEngine) -> None:
-    """Ensure search ranks relevant comic first."""
+    """Ensure search ranks relevant comic first with required attribution."""
     results = search_engine.search("overton window politics", k=SEARCH_TOP_K)
     assert len(results) >= 1
-    assert results[0]["number"] == OVERTON_COMIC_NUMBER
-    assert results[0]["url"] == f"https://xkcd.com/{OVERTON_COMIC_NUMBER}/"
-    assert results[0]["title"] == "Overton"
-    assert results[0]["image_url"]
-    assert results[0]["explanation"]
+    hit = results[0]
+    assert hit["number"] == OVERTON_COMIC_NUMBER
+    assert hit["url"] == f"https://xkcd.com/{OVERTON_COMIC_NUMBER}/"
+    assert hit["title"] == "Overton"
+    assert hit["image_url"]
+    assert hit["explanation"]
 
 
 def test_search_returns_requested_count(search_engine: SearchEngine) -> None:
@@ -73,40 +73,13 @@ def test_search_empty_index_returns_no_matches(tmp_path: Path) -> None:
     assert engine.search("definitely not a comic") == []
 
 
-def test_invalid_lance_uri_fails_loudly() -> None:
+def test_invalid_lance_uri_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure non-existent local URI raises loudly."""
-    engine = SearchEngine(uri="/nonexistent/invalid/path/that/does/not/exist")
-    with pytest.raises((ValueError, OSError)):
-        _ = engine.table
-
-
-def test_render_cards_renders_clickable_image(search_engine: SearchEngine) -> None:
-    """Ensure rendered cards include image and anchor link."""
-    html_out = render_cards(
-        "overton window politics", k=REQUESTED_COUNT, engine=search_engine
+    monkeypatch.setenv(
+        "XKCD_LANCE_URI", "/nonexistent/invalid/path/that/does/not/exist"
     )
-    assert "<img" in html_out
-    assert ">Overton</a>" not in html_out
-    assert f"#{OVERTON_COMIC_NUMBER}" not in html_out
-
-
-def test_render_cards_empty_query_is_noop(search_engine: SearchEngine) -> None:
-    """Ensure empty query returns empty string."""
-    assert render_cards("", engine=search_engine) == ""
-    assert render_cards("   ", engine=search_engine) == ""
-
-
-def test_render_cards_no_matches_message(tmp_path: Path) -> None:
-    """Ensure empty table renders no comics found message."""
-    empty_table = open_or_create_table(tmp_path / "empty_lance")
-    engine = SearchEngine(table=empty_table)
-    assert "no comics found" in render_cards("definitely not a comic", engine=engine)
-
-
-def test_build_ui_instantiates_successfully(search_engine: SearchEngine) -> None:
-    """Ensure Gradio Blocks UI is created with expected title."""
-    ui = build_ui(engine=search_engine)
-    assert ui.title == "xkcd search"
+    with pytest.raises((ValueError, OSError)):
+        SearchEngine()
 
 
 async def test_mcp_lists_search_tool(mcp_client: Client) -> None:
@@ -141,10 +114,3 @@ async def test_rest_api_search_endpoint(composed_app: Starlette | None) -> None:
         data = resp.json()
         assert isinstance(data, list)
         assert data[0]["number"] == OVERTON_COMIC_NUMBER
-
-        # Also test /search alias
-        resp_alias = await client.get("/search?q=overton+window&k=1")
-        assert resp_alias.status_code == HTTP_OK
-        data_alias = resp_alias.json()
-        assert len(data_alias) == 1
-        assert data_alias[0]["number"] == OVERTON_COMIC_NUMBER

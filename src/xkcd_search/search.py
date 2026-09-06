@@ -16,25 +16,20 @@ DEFAULT_LANCE_URI = "hf://datasets/couto/xkcd"
 class SearchEngine:
     """Semantic search engine backed by LanceDB and Hugging Face inference."""
 
-    def __init__(
-        self, table: lancedb.table.Table | None = None, uri: str | None = None
-    ) -> None:
-        """Initialize search engine with optional pre-connected table or URI."""
-        self._table = table
-        self.uri = uri
+    def __init__(self, table: lancedb.table.Table | None = None) -> None:
+        """Initialize search engine with optional pre-connected table."""
+        self.table = table or self._connect()
 
-    @property
-    def table(self) -> lancedb.table.Table:
-        """Return connected LanceDB table, opening connection on first access."""
-        if self._table is None:
-            db_uri = self.uri or os.environ.get("XKCD_LANCE_URI", DEFAULT_LANCE_URI)
-            token = os.environ.get("HF_TOKEN")
-            storage_options = {"token": token} if token else None
-            db = lancedb.connect(db_uri, storage_options=storage_options)
-            self._table = db.open_table("comics")
-        return self._table
+    @staticmethod
+    def _connect() -> lancedb.table.Table:
+        uri = os.environ.get("XKCD_LANCE_URI", DEFAULT_LANCE_URI)
+        token = os.environ.get("HF_TOKEN")
+        storage = {"token": token} if token else None
+        db = lancedb.connect(uri, storage_options=storage)
+        return db.open_table("comics")
 
-    def encode(self, query: str) -> list[float]:
+    @staticmethod
+    def encode(query: str) -> list[float]:
         """Encode query text into a vector using Hugging Face Serverless Inference."""
         client = InferenceClient(token=os.environ.get("HF_TOKEN"))
         vec = client.feature_extraction(query, model=EMBED_MODEL)
@@ -45,8 +40,7 @@ class SearchEngine:
         if not query.strip():
             return []
         k = max(1, min(int(k), 20))
-        query_vec = self.encode(query)
-        raw_hits = self.table.search(query_vec).limit(k * 4).to_list()
+        raw_hits = self.table.search(self.encode(query)).limit(k * 4).to_list()
 
         seen: set[int] = set()
         comics: list[dict[str, Any]] = []
@@ -68,11 +62,3 @@ class SearchEngine:
                 if len(comics) == k:
                     break
         return comics
-
-
-def search_xkcd(
-    query: str, k: int = 5, engine: SearchEngine | None = None
-) -> list[dict[str, Any]]:
-    """Execute semantic search over xkcd comics."""
-    active_engine = engine or SearchEngine()
-    return active_engine.search(query, k=k)

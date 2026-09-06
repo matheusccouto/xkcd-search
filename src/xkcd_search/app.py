@@ -1,19 +1,21 @@
-"""Gradio web UI and ASGI application entry point."""
+"""Gradio web UI, FastMCP server, and ASGI entry point."""
 
 from __future__ import annotations
 
 import html
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import gradio as gr
 import uvicorn
+from fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 from xkcd_search.search import SearchEngine
-from xkcd_search.server import create_server
 
 if TYPE_CHECKING:
     from starlette.applications import Starlette
+    from starlette.requests import Request
 
 CARD_STYLE = (
     "<style>"
@@ -25,29 +27,22 @@ CARD_STYLE = (
 )
 
 
-def render_cards(query: str, k: int = 5, engine: SearchEngine | None = None) -> str:
-    """Render HTML comic cards for the search UI."""
+def _render_cards(query: str, k: int, engine: SearchEngine) -> str:
     if not query.strip():
         return ""
-    search_engine = engine or SearchEngine()
-    comics = search_engine.search(query, k=int(k))
+    comics = engine.search(query, k=k)
     if not comics:
         return '<p class="xkcd-empty">no comics found</p>'
-
-    cards = []
-    for c in comics:
-        comic_url = html.escape(c["url"], quote=True)
-        image_url = html.escape(c["image_url"], quote=True)
-        alt = html.escape(c["alt_text"])
-        cards.append(
-            f'<div class="xkcd-card"><a href="{comic_url}">'
-            f'<img src="{image_url}" alt="{alt}" loading="lazy"></a></div>'
-        )
+    cards = [
+        f'<div class="xkcd-card"><a href="{html.escape(c["url"], quote=True)}">'
+        f'<img src="{html.escape(c["image_url"], quote=True)}" '
+        f'alt="{html.escape(c["alt_text"])}" loading="lazy"></a></div>'
+        for c in comics
+    ]
     return f'<div class="xkcd-cards">{CARD_STYLE}\n{"".join(cards)}\n</div>'
 
 
-def build_ui(engine: SearchEngine | None = None) -> gr.Blocks:
-    """Build the Gradio search interface."""
+def _build_ui(engine: SearchEngine) -> gr.Blocks:
     with gr.Blocks(title="xkcd search") as ui:
         gr.Markdown("# xkcd search")
         with gr.Row():
@@ -69,22 +64,37 @@ def build_ui(engine: SearchEngine | None = None) -> gr.Blocks:
         output = gr.HTML(label="Results")
 
         def on_search(q: str, count: float) -> str:
-            return render_cards(q, k=int(count), engine=engine)
+            return _render_cards(q, int(count), engine)
 
         submit.click(on_search, inputs=[query, k_input], outputs=output)
         query.submit(on_search, inputs=[query, k_input], outputs=output)
     return ui
 
 
-def build_app(engine: SearchEngine | None = None) -> Starlette:
-    """Mount Gradio UI onto FastMCP HTTP server."""
+def create_app(engine: SearchEngine | None = None) -> tuple[FastMCP, Starlette]:
+    """Create FastMCP server and mounted Gradio web application."""
     search_engine = engine or SearchEngine()
-    _, server_app = create_server(search_engine)
-    ui = build_ui(search_engine)
-    return gr.mount_gradio_app(server_app, ui, path="/")
+
+    mcp = FastMCP("xkcd-search")
+
+    @mcp.tool(name="search_xkcd")
+    def search_tool(query: str, k: int = 5) -> list[dict[str, Any]]:
+        """Semantic search over xkcd comics, ranked by relevance."""
+        return search_engine.search(query, k=k)
+
+    @mcp.custom_route("/api/search", methods=["GET"])
+    async def search_api(request: Request) -> JSONResponse:
+        q = request.query_params.get("q", "")
+        k_val = int(request.query_params.get("k", "5"))
+        return JSONResponse(search_engine.search(q, k=k_val))
+
+    server_app = mcp.http_app(path="/mcp")
+    ui = _build_ui(search_engine)
+    app = gr.mount_gradio_app(server_app, ui, path="/")
+    return mcp, app
 
 
-app = build_app()
+mcp, app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "7860"))

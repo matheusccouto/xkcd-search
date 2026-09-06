@@ -17,7 +17,6 @@ from xkcd_search.ingest import (
     upsert_comic,
 )
 from xkcd_search.search import SearchEngine
-from xkcd_search.server import create_server
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -62,7 +61,7 @@ async def mcp_client(search_engine: SearchEngine) -> AsyncIterator[Client]:
         async with Client(url, auth=auth) as client:
             yield client
     else:
-        mcp, _ = create_server(search_engine)
+        mcp, _ = app_mod.create_app(search_engine)
         async with Client(mcp) as client:
             yield client
 
@@ -73,4 +72,5 @@ def composed_app(search_engine: SearchEngine) -> Starlette | None:
     if os.getenv("XKCD_TEST_URL"):
         return None
 
-    return app_mod.build_app(search_engine)
+    _, app = app_mod.create_app(search_engine)
+    return app

@@ -67,7 +67,7 @@ uv sync
 uv run pytest                                   # in-process integration tests
 uv run xkcd-ingest                             # build/update local LanceDB table
 uv run python -m xkcd_search.app                # run composed app (UI at /, MCP at /mcp, REST at /api/search)
-uv run fastmcp dev src/xkcd_search/server.py:mcp # open the FastMCP inspector
+uv run fastmcp dev src/xkcd_search/app.py:mcp # open the FastMCP inspector
 ```
 
 ## Testing
