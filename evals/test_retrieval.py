@@ -1,27 +1,27 @@
-"""Retrieval evaluation benchmark suite using vanilla pytest."""
+"""Retrieval evaluation benchmark suite for local LanceDB and deployed endpoints."""
 
 from __future__ import annotations
 
+import argparse
 import json
+import math
+import statistics
+import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
-from xkcd_search.ingest import (
-    fetch_explainxkcd,
-    fetch_xkcd,
-    new_client,
-    open_or_create_table,
-    upsert_comic,
+from evals.conftest import (
+    EVAL_LANCE_DIR,
+    Retriever,
+    create_retriever,
+    ensure_eval_corpus,
 )
-from xkcd_search.search import SearchEngine
 
-if TYPE_CHECKING:
-    from lancedb.table import Table
+__all__ = ["EVAL_LANCE_DIR", "ensure_eval_corpus", "test_retrieval"]
 
 DATASET_PATH = Path(__file__).resolve().parent / "dataset.json"
-EVAL_LANCE_DIR = Path(__file__).resolve().parent / "data" / "lance"
 TOP_K = 5
 RANK_1 = 1
 RANK_3 = 3
@@ -47,35 +47,12 @@ def load_cases() -> list[dict[str, Any]]:
 
 
 EVAL_CASES = load_cases()
-REQUIRED_NUMBERS = sorted({c["comic_number"] for c in EVAL_CASES})
-
-
-def ensure_eval_corpus() -> Table:
-    """Ensure local LanceDB table exists and contains all required comics."""
-    table = open_or_create_table(EVAL_LANCE_DIR)
-    existing = set(table.to_arrow()["number"].to_pylist()) if len(table) > 0 else set()
-    missing = [n for n in REQUIRED_NUMBERS if n not in existing]
-
-    if missing:
-        with new_client() as client:
-            for n in missing:
-                comic = fetch_xkcd(n, client)
-                article = fetch_explainxkcd(n, client)
-                upsert_comic(table, comic, article)
-    return table
-
-
-@pytest.fixture(scope="session")
-def search_engine() -> SearchEngine:
-    """Provide SearchEngine connected to the evaluation corpus."""
-    table = ensure_eval_corpus()
-    return SearchEngine(table=table)
 
 
 @pytest.mark.parametrize("case", EVAL_CASES, ids=[c["id"] for c in EVAL_CASES])
-def test_retrieval(case: dict[str, Any], search_engine: SearchEngine) -> None:
+def test_retrieval(case: dict[str, Any], retriever: Retriever) -> None:
     """Verify semantic search returns expected comic in top-5."""
-    hits = search_engine.search(case["query"], k=TOP_K)
+    hits = retriever(case["query"], k=TOP_K)
     retrieved = [h["number"] for h in hits]
     assert case["comic_number"] in retrieved, (
         f"Query '{case['query']}' failed to retrieve #{case['comic_number']} "
@@ -83,55 +60,97 @@ def test_retrieval(case: dict[str, Any], search_engine: SearchEngine) -> None:
     )
 
 
-def run_benchmark() -> None:
-    """CLI benchmark runner calculating HitRate and MRR across all queries."""
-    table = ensure_eval_corpus()
-    engine = SearchEngine(table=table)
+def print_summary(
+    target: str,
+    stats: dict[str, Any],
+    latencies: list[float],
+) -> None:
+    """Print formatted evaluation summary metrics."""
+    total = stats["total"]
+    h1 = stats["hits_1"]
+    h3 = stats["hits_3"]
+    h5 = stats["hits_5"]
+    mrr = stats["mrr"]
+    ndcg = stats["ndcg"]
+    mean_lat = statistics.mean(latencies) if latencies else 0.0
+    median_lat = statistics.median(latencies) if latencies else 0.0
 
+    print("=" * 84)
+    print(f"Benchmark Target:      {target}")
+    print(f"Total Queries:         {total}")
+    print(f"Hit Rate @ 1:          {h1}/{total} ({(h1 / total) * 100:.1f}%)")
+    print(f"Hit Rate @ 3:          {h3}/{total} ({(h3 / total) * 100:.1f}%)")
+    print(f"Hit Rate @ 5:          {h5}/{total} ({(h5 / total) * 100:.1f}%)")
+    print(f"Mean Reciprocal Rank:  {mrr:.3f}")
+    print(f"NDCG @ 5:              {ndcg:.3f}")
+    print(f"Mean Latency:          {mean_lat:.1f} ms")
+    print(f"Median Latency:        {median_lat:.1f} ms")
+    print("=" * 84)
+
+
+def run_benchmark(url: str | None = None) -> None:
+    """Run evaluation benchmark calculating HitRate, MRR, NDCG@5, and latency."""
+    retriever_fn, target_desc = create_retriever(url)
     total = len(EVAL_CASES)
-    hits_1 = 0
-    hits_3 = 0
-    hits_5 = 0
-    rr_sum = 0.0
+    hits_1 = hits_3 = hits_5 = 0
+    rr_sum = ndcg_sum = 0.0
+    latencies: list[float] = []
 
-    print(f"\nEvaluating {total} queries across {len(REQUIRED_NUMBERS)} comics...\n")
-    print(f"{'Target':<22} | {'Rank':<6} | {'RR':<6} | {'Query'}")
-    print("-" * 75)
+    print(f"\nEvaluating {total} queries against {target_desc}...\n")
+    print(f"{'Target':<22} | {'Rank':<6} | {'RR':<6} | {'NDCG':<6} | {'ms':<6} | Query")
+    print("-" * 84)
 
     for case in EVAL_CASES:
-        query = case["query"]
-        expected = case["comic_number"]
-        title = case["title"]
+        t0 = time.perf_counter()
+        hits = retriever_fn(case["query"], k=TOP_K)
+        lat = (time.perf_counter() - t0) * 1000.0
+        latencies.append(lat)
 
-        hits = engine.search(query, k=TOP_K)
         retrieved = [h["number"] for h in hits]
-
-        if expected in retrieved:
-            rank = retrieved.index(expected) + 1
+        exp = case["comic_number"]
+        if exp in retrieved:
+            rank = retrieved.index(exp) + 1
             rr = 1.0 / rank
-            if rank == RANK_1:
-                hits_1 += 1
-            if rank <= RANK_3:
-                hits_3 += 1
+            ndcg = 1.0 / math.log2(rank + 1)
+            hits_1 += int(rank == RANK_1)
+            hits_3 += int(rank <= RANK_3)
             hits_5 += 1
         else:
             rank = -1
-            rr = 0.0
+            rr = ndcg = 0.0
 
         rr_sum += rr
+        ndcg_sum += ndcg
         rank_str = str(rank) if rank > 0 else "MISS"
-        target_str = f"#{expected} {title}"[:21]
-        print(f"{target_str:<22} | {rank_str:<6} | {rr:<6.2f} | {query}")
+        target_str = f"#{exp} {case['title']}"[:21]
+        print(
+            f"{target_str:<22} | {rank_str:<6} | {rr:<6.2f} | "
+            f"{ndcg:<6.2f} | {lat:<6.0f} | {case['query']}"
+        )
 
-    mrr = rr_sum / total if total > 0 else 0.0
-    print("=" * 75)
-    print(f"Total Queries:         {total}")
-    print(f"Hit Rate @ 1:          {hits_1}/{total} ({(hits_1 / total) * 100:.1f}%)")
-    print(f"Hit Rate @ 3:          {hits_3}/{total} ({(hits_3 / total) * 100:.1f}%)")
-    print(f"Hit Rate @ 5:          {hits_5}/{total} ({(hits_5 / total) * 100:.1f}%)")
-    print(f"Mean Reciprocal Rank:  {mrr:.3f}")
-    print("=" * 75)
+    stats = {
+        "total": total,
+        "hits_1": hits_1,
+        "hits_3": hits_3,
+        "hits_5": hits_5,
+        "mrr": rr_sum / total if total > 0 else 0.0,
+        "ndcg": ndcg_sum / total if total > 0 else 0.0,
+    }
+    print_summary(target_desc, stats, latencies)
+
+
+def main() -> None:
+    """CLI entrypoint for retrieval benchmark."""
+    parser = argparse.ArgumentParser(description="Evaluate search retrieval quality.")
+    parser.add_argument(
+        "--url",
+        type=str,
+        default=None,
+        help="Optional base URL of deployed search API",
+    )
+    args = parser.parse_args()
+    run_benchmark(url=args.url)
 
 
 if __name__ == "__main__":
-    run_benchmark()
+    main()

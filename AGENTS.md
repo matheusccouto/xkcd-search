@@ -23,9 +23,9 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 
 - `uv sync`: Install dependencies.
 - `uv run pytest`: Run test suite.
-- `uv run pytest evals/`: Run retrieval evaluation benchmark suite.
-- `uv run python -m evals.test_retrieval`: Print aggregated evaluation metrics report.
-- `uv run python -m evals.sampler --count 3`: Sample random comics from explainxkcd to template new entries.
+- `uv run pytest evals/`: Run retrieval evaluation benchmark suite (local or remote with `XKCD_TEST_URL`).
+- `uv run python -m evals.test_retrieval`: Print aggregated evaluation metrics report (`--url` for remote).
+- `uv run python -m evals.sampler --count 3`: Sample random comics from LanceDB to template new entries.
 - `uvx ruff check . && uvx ruff format --check . && uvx ty check`: Lint and typecheck.
 - `uv run xkcd-ingest`: Rebuild or update LanceDB index.
 - `uv run python -m xkcd_search.app`: Run local server on port 7860.

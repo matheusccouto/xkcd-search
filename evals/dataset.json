@@ -3,119 +3,108 @@
     "comic_number": 353,
     "title": "Python",
     "queries": [
-      "python flying",
-      "import antigravity",
-      "leaving perl for python",
-      "how python feels"
+      "programming language so simple it feels like floating in the air",
+      "feeling like gravity no longer holds you back when coding",
+      "sudden superhuman developer productivity after switching languages"
     ]
   },
   {
     "comic_number": 327,
     "title": "Exploits of a Mom",
     "queries": [
-      "little bobby tables",
-      "sql injection school",
-      "drop table students",
-      "sanitize database inputs"
+      "mother giving her child a name that breaks school software",
+      "database wiped out by entering code into a student registration form",
+      "sanitizing database queries to prevent malicious names"
     ]
   },
   {
     "comic_number": 3230,
     "title": "Overton",
     "queries": [
-      "overton window",
-      "moving dates on tombstone",
-      "overton window shifting",
-      "sunlight angle morning window"
+      "shifting boundaries of public discourse over time",
+      "literal interpretation of the window of acceptable political ideas",
+      "historical gravestone with dates and sunlight shifting acceptable opinions"
     ]
   },
   {
     "comic_number": 927,
     "title": "Standards",
     "queries": [
-      "14 competing standards",
-      "universal standard now there are 15",
-      "standards proliferation",
-      "charger cable standards"
+      "everyone creating their own format instead of agreeing on one",
+      "attempting to unify different systems but just adding another",
+      "why do companies keep inventing new incompatible cables"
     ]
   },
   {
     "comic_number": 936,
     "title": "Password Strength",
     "queries": [
-      "correct horse battery staple",
-      "password strength entropy",
-      "memorizing common words passphrase",
-      "bad password rules numbers symbols"
+      "why IT security forcing rules make passwords weaker",
+      "using dictionary phrases rather than arbitrary character substitutions",
+      "memorability of passwords vs difficulty for computers to guess"
     ]
   },
   {
     "comic_number": 303,
     "title": "Compiling",
     "queries": [
-      "my code is compiling",
-      "sword fighting programmers",
-      "slacking off while compiling",
-      "programmer excuse compile time"
+      "excuse for goofing off at work while waiting for automated build steps",
+      "why programmers duel with toy swords when waiting for builds",
+      "wasting company time because the computer is busy compiling"
     ]
   },
   {
     "comic_number": 2405,
     "title": "Flash Gatsby",
     "queries": [
-      "great gatsby public domain",
-      "adobe flash player dead",
-      "excuse for not reading gatsby",
-      "midnight copyright expiration"
+      "old flash games disappearing while classic literature enters public domain",
+      "digital decay and obsolescence of early 2000s web animations",
+      "novel copyright expiring at midnight on new years day"
     ]
   },
   {
     "comic_number": 1852,
     "title": "Election Map",
     "queries": [
-      "election map land area",
-      "red blue precincts population",
-      "county voting map misleading",
-      "geographic electoral visualization"
+      "presidential election results distorted by empty rural territory",
+      "popular vote versus geographic surface area in maps",
+      "why land area doesnt represent human voters on political graphics"
     ]
   },
   {
     "comic_number": 2245,
     "title": "Edible Arrangements",
     "queries": [
-      "any arrangement is edible arrangement",
-      "hungry eating furniture",
-      "fruit bouquet parody"
+      "starving person looking at household decor as snacks",
+      "trying to consume household furniture during a hunger emergency",
+      "absurd interpretation of floral or gift basket deliveries"
     ]
   },
   {
     "comic_number": 2224,
     "title": "Software Updates",
     "queries": [
-      "spacecraft software update",
-      "deep space probe ping time",
-      "everything is a cloud application",
-      "slow ping satellite"
+      "delay and latency trying to push bug fixes to an exploratory space probe",
+      "inability to update remote machinery because of light speed lag",
+      "everything becoming dependent on remote internet servers"
     ]
   },
   {
     "comic_number": 3004,
     "title": "Wells",
     "queries": [
-      "digging for water hitting oil",
-      "accidental petroleum well",
-      "striking free fuel in backyard",
-      "drilling well crude oil"
+      "homeowner looking for drinking water accidentally discovering petroleum",
+      "backyard shovel hitting black gold and causing a financial headache",
+      "unwanted crude oil contaminating a residential backyard"
     ]
   },
   {
     "comic_number": 2733,
     "title": "Size Comparisons",
     "queries": [
-      "solar system size of texas",
-      "shrinking astronomical scale",
-      "grasshopper in dallas analogy",
-      "scale comparison planets"
+      "comparing planetary orbits to everyday objects like ants in texas",
+      "unhelpful analogies for understanding astronomical distance",
+      "shrinking cosmic scales to state boundaries makes no sense"
     ]
   }
 ]
