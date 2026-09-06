@@ -1,87 +1,85 @@
-"""Sample random comics from explainxkcd to create new entries in evals/dataset.json."""
+"""Sample random comics from LanceDB to create new entries in evals/dataset.json."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
+import random
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from xkcd_search.ingest import (
-    fetch_explainxkcd,
-    fetch_xkcd,
-    new_client,
-    open_or_create_table,
-    upsert_comic,
-)
+from evals.test_retrieval import ensure_eval_corpus
 
-if TYPE_CHECKING:
-    import httpx
-
-RANDOM_URL = "https://www.explainxkcd.com/random-explanation"
-EVAL_LANCE_DIR = Path(__file__).resolve().parent / "data" / "lance"
+DATASET_PATH = Path(__file__).resolve().parent / "dataset.json"
 
 
-def sample_random_comic(client: httpx.Client) -> dict[str, Any]:
-    """Follow explainxkcd random redirect and fetch comic data."""
-    resp = client.get(RANDOM_URL)
-    match = re.search(r"/wiki/index\.php/(\d+):", str(resp.url))
-    if not match:
-        msg = f"Could not parse comic number from redirect URL: {resp.url}"
-        raise ValueError(msg)
-    num = int(match.group(1))
-    comic = fetch_xkcd(num, client)
-    article = fetch_explainxkcd(num, client)
-    return {
-        "comic_number": num,
-        "title": comic["title"],
-        "alt_text": comic["alt_text"],
-        "comic": comic,
-        "article": article,
-    }
+def sample_from_lancedb(count: int = 1) -> list[dict[str, Any]]:
+    """Sample random comics directly from the LanceDB table."""
+    table = ensure_eval_corpus()
+    arrow_tbl = table.to_arrow()
+
+    seen: set[int] = set()
+    comics: list[dict[str, Any]] = []
+    for num, title, alt in zip(
+        arrow_tbl["number"].to_pylist(),
+        arrow_tbl["title"].to_pylist(),
+        arrow_tbl["alt_text"].to_pylist(),
+        strict=False,
+    ):
+        if num not in seen:
+            seen.add(num)
+            comics.append({"comic_number": num, "title": title, "alt_text": alt})
+
+    if not comics:
+        return []
+
+    # Prefer sampling comics not yet in dataset.json
+    if DATASET_PATH.exists():
+        existing = {
+            c["comic_number"]
+            for c in json.loads(DATASET_PATH.read_text(encoding="utf-8"))
+        }
+        candidates = [c for c in comics if c["comic_number"] not in existing]
+        pool = candidates or comics
+    else:
+        pool = comics
+
+    sample_size = min(count, len(pool))
+    return random.sample(pool, sample_size)
 
 
 def main() -> int:
-    """CLI to discover comics and generate dataset.json templates."""
+    """CLI to sample comics from LanceDB and print dataset.json templates."""
     parser = argparse.ArgumentParser(
-        description="Discover random explainxkcd pages to add to evals/dataset.json"
+        description="Sample random comics from LanceDB to add to evals/dataset.json"
     )
     parser.add_argument(
         "--count", type=int, default=1, help="Number of random comics to sample"
     )
-    parser.add_argument(
-        "--index",
-        action="store_true",
-        help="Also index sampled comic into local evaluation database",
-    )
     args = parser.parse_args()
 
-    table = open_or_create_table(EVAL_LANCE_DIR) if args.index else None
+    sampled = sample_from_lancedb(count=args.count)
+    if not sampled:
+        print("No comics found in LanceDB table.")
+        return 1
 
-    with new_client() as client:
-        for i in range(args.count):
-            item = sample_random_comic(client)
-            num = item["comic_number"]
-            title = item["title"]
+    for i, item in enumerate(sampled):
+        num = item["comic_number"]
+        title = item["title"]
 
-            print(f"\n[{i + 1}/{args.count}] #{num} - {title}")
-            print(f"Alt text: {item['alt_text']}")
-            print("\nPaste this template into evals/dataset.json:")
-            template = {
-                "comic_number": num,
-                "title": title,
-                "queries": [
-                    "add realistic user query 1",
-                    "add realistic user query 2",
-                ],
-            }
-            print(json.dumps(template, indent=2))
-
-            if table is not None:
-                upsert_comic(table, item["comic"], item["article"])
-                print(f"Indexed #{num} into {EVAL_LANCE_DIR}")
+        print(f"\n[{i + 1}/{len(sampled)}] #{num} - {title}")
+        print(f"Alt text: {item['alt_text']}")
+        print("\nPaste this template into evals/dataset.json:")
+        template = {
+            "comic_number": num,
+            "title": title,
+            "queries": [
+                "add realistic user query 1",
+                "add realistic user query 2",
+            ],
+        }
+        print(json.dumps(template, indent=2))
 
     return 0
 

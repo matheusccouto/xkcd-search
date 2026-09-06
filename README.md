@@ -121,7 +121,7 @@ uv run pytest evals/
 # Run benchmark report (Hit@1, Hit@3, Hit@5, MRR)
 uv run python -m evals.test_retrieval
 
-# Discover random explainxkcd pages to add new entries to dataset.json
+# Sample random comics from the index to template new entries in dataset.json
 uv run python -m evals.sampler --count 3
 ```
 
