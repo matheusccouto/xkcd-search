@@ -6,7 +6,6 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
-from fastmcp import Client
 
 from xkcd_search import app as app_mod
 from xkcd_search.ingest import (
@@ -19,8 +18,7 @@ from xkcd_search.ingest import (
 from xkcd_search.search import SearchEngine
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
+    from fastmcp import FastMCP
     from lancedb.table import Table
     from starlette.applications import Starlette
 
@@ -53,17 +51,13 @@ def search_engine(built_index: Table | None) -> SearchEngine:
 
 
 @pytest.fixture
-async def mcp_client(search_engine: SearchEngine) -> AsyncIterator[Client]:
-    """Provide MCP client connected in-process or to live cloud."""
+def mcp_server(search_engine: SearchEngine) -> FastMCP | str:
+    """Provide FastMCP server instance or live URL string."""
     url = os.getenv("XKCD_TEST_URL")
     if url:
-        auth = "oauth" if "fastmcp.app" in url else None
-        async with Client(url, auth=auth) as client:
-            yield client
-    else:
-        mcp, _ = app_mod.create_app(search_engine)
-        async with Client(mcp) as client:
-            yield client
+        return url
+    mcp, _ = app_mod.create_app(search_engine)
+    return mcp
 
 
 @pytest.fixture

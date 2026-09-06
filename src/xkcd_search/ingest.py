@@ -131,17 +131,14 @@ def open_or_create_table(path: Path | str) -> lancedb.table.Table:
 def upsert_comic(
     table: lancedb.table.Table,
     comic: dict[str, Any],
-    article: str | object,
+    article: str,
 ) -> None:
     """Upsert comic chunks and embeddings into LanceDB."""
-    wikitext = (
-        str(article.wikitext) if hasattr(article, "wikitext") else str(article or "")
-    )
-    chunks = chunk_comic(comic, wikitext)
+    chunks = chunk_comic(comic, article)
     texts = [text for _, text in chunks]
     vectors = encode(texts) if texts else []
     explanation = (
-        str(mwparserfromhell.parse(wikitext).strip_code()).strip() if wikitext else ""
+        str(mwparserfromhell.parse(article).strip_code()).strip() if article else ""
     )
 
     records = [

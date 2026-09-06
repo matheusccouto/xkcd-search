@@ -10,23 +10,22 @@ pinned: false
 
 # xkcd-search
 
-Semantic search for xkcd comics across the full 3,000+ comic archive plus explainxkcd.com.
+Semantic search for the complete xkcd archive (3,000+ comics) plus explainxkcd.com. Backed by LanceDB and Hugging Face Serverless Inference.
 
 Reachable four ways:
-1. **Web UI**: [https://couto-xkcd-search.hf.space](https://couto-xkcd-search.hf.space) (browse comic cards)
-2. **REST API**: `GET https://couto-xkcd-search.hf.space/api/search?q={query}&k={count}` (unauthenticated JSON API)
-3. **Agent Skill**: `.agents/skills/xkcd-search/SKILL.md` (installable via `npx skills add matheusccouto/xkcd-search-mcp`)
-4. **MCP Endpoint**: `https://couto-xkcd-search.hf.space/mcp` (for Claude Desktop, Cursor, and FastMCP clients)
+- **Web UI**: [https://couto-xkcd-search.hf.space](https://couto-xkcd-search.hf.space)
+- **REST API**: `GET /api/search?q={query}&k={count}`
+- **MCP Server**: `https://couto-xkcd-search.hf.space/mcp`
+- **Agent Skill**: `npx skills add matheusccouto/xkcd-search-mcp`
 
-## REST API
+## Interfaces & Installation
 
-An unauthenticated endpoint for scripts, tools, and AI agents:
+### 1. REST API
+Unauthenticated endpoint for scripts, tools, and agents:
 
 ```bash
-curl -s "https://couto-xkcd-search.hf.space/api/search?q=standards+universal&k=2"
+curl -s "https://couto-xkcd-search.hf.space/api/search?q=standards+universal&k=1"
 ```
-
-Response JSON:
 
 ```json
 [
@@ -35,53 +34,84 @@ Response JSON:
     "title": "Standards",
     "url": "https://xkcd.com/927/",
     "image_url": "https://imgs.xkcd.com/comics/standards.png",
-    "alt_text": "Fortunately, the charging one has been solved now that we've all standardized on mini-USB. USB 3.0 mini-B, that is. No, wait, micro-B. Ok, listen:...",
+    "alt_text": "Fortunately, the charging one has been solved...",
     "transcript": "...",
     "explanation": "..."
   }
 ]
 ```
 
-## MCP Tool
+### 2. Model Context Protocol (MCP)
+Add the remote MCP server to your client.
 
-Connect any MCP client to `https://couto-xkcd-search.hf.space/mcp`:
-
-```python
-search_xkcd(query: str, k: int = 5) -> list[dict]
+**Claude Desktop** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "xkcd": {
+      "url": "https://couto-xkcd-search.hf.space/mcp"
+    }
+  }
+}
 ```
 
-Semantic top-K lookup. Every result is a dict with `number`, `title`, `url`, `image_url`, `alt_text`, `transcript`, and `explanation`. Cite `url` when referencing a comic.
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "xkcd": {
+      "url": "https://couto-xkcd-search.hf.space/mcp"
+    }
+  }
+}
+```
+
+**FastMCP CLI**:
+```bash
+fastmcp run https://couto-xkcd-search.hf.space/mcp
+```
+
+Tool provided:
+- `search_xkcd(query: str, k: int = 5) -> list[dict]`
+
+### 3. Agent Skill
+Install the skill into agentic workflows:
+
+```bash
+npx skills add matheusccouto/xkcd-search-mcp
+```
+
+### 4. Web UI
+Visit [https://couto-xkcd-search.hf.space](https://couto-xkcd-search.hf.space) to search and view comics directly in your browser.
 
 ## How it works
 
-1. A daily GitHub Actions job (`.github/workflows/index-daily.yml`) fetches new comics and explainxkcd wikitext.
-2. Chunks are embedded with `BAAI/bge-small-en-v1.5` via Hugging Face Serverless Inference.
-3. Records are stored in a **LanceDB** table and published directly to Hugging Face Datasets (`couto/xkcd`).
-4. The workflow calls the Hugging Face Spaces restart API to redeploy.
-5. The Space connects to the Lance dataset and serves the web UI at `/`, FastMCP at `/mcp`, and REST API at `/api/search`.
+1. **Scraping**: A nightly workflow checks for new comics on xkcd.com and explanations on explainxkcd.com.
+2. **Embedding**: Text chunks are embedded with `BAAI/bge-small-en-v1.5` via Hugging Face Serverless Inference.
+3. **Storage**: LanceDB dataset hosted on Hugging Face Datasets (`couto/xkcd`).
+4. **Serving**: A Docker Space runs FastMCP, Gradio, and Starlette on port 7860.
 
-## Local development
+## Local Development
 
 ```bash
+# Setup
 uv sync
-uv run pytest                                   # in-process integration tests
-uv run xkcd-ingest                             # build/update local LanceDB table
-uv run python -m xkcd_search.app                # run composed app (UI at /, MCP at /mcp, REST at /api/search)
-uv run fastmcp dev src/xkcd_search/app.py:mcp # open the FastMCP inspector
+
+# Run tests
+uv run pytest
+
+# Test against live Space
+XKCD_TEST_URL=https://couto-xkcd-search.hf.space/mcp uv run pytest
+
+# Lint and type check
+uvx ruff check . && uvx ruff format --check . && uvx ty check
+
+# Run local server
+uv run python -m xkcd_search.app
 ```
 
-## Testing
+## Attribution and Licensing
 
-```bash
-uv run pytest                                             # in-process integration
-XKCD_TEST_URL=https://couto-xkcd-search.hf.space/mcp \
-    uv run pytest tests/test_app.py                       # hit live Space
-```
-
-## Attribution and licensing
-
-Search results are indexed from explainxkcd.com, licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). When citing a result, link back to the comic's `url` and credit the explainxkcd contributors.
-
-Comic images remain the work of Randall Munroe, licensed under [CC BY-NC 2.5](https://xkcd.com/license.html).
-
-The source code in this repository is licensed under [Apache 2.0](./LICENSE).
+- **explainxkcd**: Content is licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). When citing results, link back to the comic's `url`.
+- **xkcd**: Comics are created by Randall Munroe and licensed under [CC BY-NC 2.5](https://xkcd.com/license.html).
+- **Source code**: Licensed under [Apache 2.0](./LICENSE).

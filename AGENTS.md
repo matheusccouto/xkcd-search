@@ -6,7 +6,7 @@ Semantic search over xkcd and explainxkcd, reachable four ways:
 3. Unauthenticated REST API at `/api/search?q={query}&k={count}`
 4. Agent Skill at `.agents/skills/xkcd-search/SKILL.md`
 
-Corpus is indexed in **LanceDB** and hosted on Hugging Face Datasets (`couto/xkcd`).
+Corpus is indexed in LanceDB and hosted on Hugging Face Datasets (`couto/xkcd`).
 Live endpoint: `https://couto-xkcd-search.hf.space`.
 
 ## Layout
@@ -16,14 +16,13 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 - `src/xkcd_search/ingest.py`: Scraping xkcd + explainxkcd, computing embeddings, and publishing to Hugging Face.
 - `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
 - `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.
-- `tests/test_index_daily_workflow.py`: Nightly GitHub Action contract tests.
 - `.github/workflows/index-daily.yml`: Nightly build, upload to HF dataset, and Space redeploy.
 
 ## Commands
 
 - `uv sync`: Install dependencies.
 - `uv run pytest`: Run test suite.
-- `uv run ruff check . && uv run ruff format --check . && uv run ty check`: Lint and typecheck.
+- `uvx ruff check . && uvx ruff format --check . && uvx ty check`: Lint and typecheck.
 - `uv run xkcd-ingest`: Rebuild or update LanceDB index.
 - `uv run python -m xkcd_search.app`: Run local server on port 7860.
 
