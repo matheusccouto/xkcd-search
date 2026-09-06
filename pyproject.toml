@@ -12,14 +12,11 @@ dependencies = [
     "fastmcp>=3.2.4",
     "gradio>=6.22.0",
     "httpx>=0.28.1",
-    "sentence-transformers>=5.4.1",
-    "sqlite-vec>=0.1.9",
-    "tenacity>=9.0.0",
-    "torch>=2.11.0",
+    "huggingface-hub>=1.27.0",
+    "lancedb>=0.38.0",
+    "mwparserfromhell>=0.7.2",
 ]
 
-[project.scripts]
-evals = "xkcd_search.evals:main"
 
 [project.urls]
 Homepage = "https://github.com/matheusccouto/xkcd-search-mcp"
@@ -32,25 +29,24 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "xkcd_search"
 
-[tool.uv.sources]
-# torch is used CPU-only (dev machines and the HF Space run without a GPU);
-# pulling the CPU build keeps the venv and the Docker image small.
-torch = { index = "pytorch-cpu" }
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
+[project.scripts]
+xkcd-ingest = "xkcd_search.ingest:main"
 
 [tool.ruff]
-line-length = 100
-target-version = "py312"
+exclude = [".agents"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+select = ["ALL"]
+ignore = [
+    "D203",   # Incompatible with D211
+    "D213",   # Incompatible with D212
+    "COM812", # Incompatible with ruff format
+    "ISC001", # Incompatible with ruff format
+    "CPY001", # Missing copyright notice
+]
 
-[tool.ty.environment]
-python-version = "3.12"
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -58,9 +54,6 @@ addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
 
 [dependency-groups]
-builder = [
-    "mwparserfromhell>=0.7.2",
-]
 dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=0.24",

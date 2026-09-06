@@ -1,75 +1,36 @@
 # xkcd-search-mcp
 
-Remote MCP server exposing a single tool, `search_xkcd`, for semantic search over xkcd plus explainxkcd. The corpus is rebuilt nightly by a GitHub Action, shipped as an `index.sqlite` Release asset, and the workflow calls the HF Spaces restart API to redeploy. The server downloads the asset once at boot; there is no polling. The live endpoint is `https://couto-xkcd-search.hf.space/mcp`.
+Semantic search over xkcd and explainxkcd, reachable four ways:
+1. Gradio search web app at `/`
+2. Remote FastMCP endpoint at `/mcp` (`search_xkcd`)
+3. Unauthenticated REST API at `/api/search?q={query}&k={count}`
+4. Agent Skill at `.agents/skills/xkcd-search/SKILL.md`
+
+Corpus is indexed in **LanceDB** and hosted on Hugging Face Datasets (`couto/xkcd`).
+Live endpoint: `https://couto-xkcd-search.hf.space`.
 
 ## Layout
 
-- `src/xkcd_search/server.py` FastMCP server, `search_xkcd` tool, `build_app()` composition seam, boot-time download
-- `src/xkcd_search/app.py` composed deployment entry (`python -m xkcd_search.app`): runs `build_app()` under uvicorn
-- `src/xkcd_search/builder.py` HTTP fetchers, chunker, embeddings, SQLite upsert, nightly `__main__`
-- `src/xkcd_search/search_app.py` Gradio search app: `search_cards`/`ComicCard` seam, `render_cards`, `build_ui`
-- `src/xkcd_search/schema.sql` sqlite-vec schema
-- `tests/` pytest-asyncio integration tests (in-process or cloud via `XKCD_TEST_URL`)
-- `.github/workflows/index-daily.yml` daily build, publish, redeploy
-
-## Tech stack
-
-Python 3.12, managed with `uv`. Linting `ruff`, typechecking `ty`. MCP via `fastmcp`. Embeddings via `sentence-transformers`. Vector search via `sqlite-vec`.
+- `src/xkcd_search/search.py`: Core retrieval engine (`SearchEngine`), embedding generation, and LanceDB queries.
+- `src/xkcd_search/server.py`: FastMCP server, `search_xkcd` tool, and native REST endpoint (`/api/search`).
+- `src/xkcd_search/app.py`: Gradio web UI (`/`) and ASGI entry point.
+- `src/xkcd_search/ingest.py`: Scraping xkcd + explainxkcd, computing embeddings, and publishing to Hugging Face.
+- `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
+- `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.
+- `tests/test_index_daily_workflow.py`: Nightly GitHub Action contract tests.
+- `.github/workflows/index-daily.yml`: Nightly build, upload to HF dataset, and Space redeploy.
 
 ## Commands
 
-- `uv sync` install
-- `uv run pytest` integration tests (in-process Client, hits xkcd.com + explainxkcd.com once per session to build the fixture)
-- `XKCD_TEST_URL=https://couto-xkcd-search.hf.space/mcp uv run pytest tests/test_server.py` run the same suite against the live HF Space endpoint
-- `uv run ruff check . && uv run ruff format --check . && uv run ty check` lint plus typecheck
-- `uv run python -m xkcd_search.builder` rebuild the index locally (full run, no limit flag)
-- `uv run python -m xkcd_search.app` run the composed app (search UI at `/`, MCP at `/mcp`)
-- `uv run fastmcp dev src/xkcd_search/server.py` open the FastMCP inspector
+- `uv sync`: Install dependencies.
+- `uv run pytest`: Run test suite.
+- `uv run ruff check . && uv run ruff format --check . && uv run ty check`: Lint and typecheck.
+- `uv run xkcd-ingest`: Rebuild or update LanceDB index.
+- `uv run python -m xkcd_search.app`: Run local server on port 7860.
 
-<important if="you are writing or modifying tests">
-- pytest-asyncio runs in auto mode. Write `async def test_...`; do NOT wrap in `asyncio.run(...)`.
-- Server tests use the `mcp_client` fixture in `tests/conftest.py`. It picks in-process `Client(server.mcp)` by default and `Client(XKCD_TEST_URL, auth="oauth")` when that env var is set.
-- The `built_index` fixture (session-scoped) fetches 3 real comics from xkcd.com + explainxkcd.com, builds a SQLite index in a temp dir, and swaps `server._conn`. It is a no-op in cloud mode because cloud tests hit the real production index.
-- No VCR, no cassettes, no mocks. If xkcd.com or explainxkcd.com is unreachable, `built_index` fails loudly. That is intentional: the tests are integration tests by design.
-- If something is hard to test without a mock, the code under test has a design problem; fix that first.
-</important>
+## Core Rules
 
-<important if="you are editing src/xkcd_search/server.py or adding MCP tools">
-- Tool args are the public contract: every arg shows up in the schema the LLM sees. Use explicit bool flags, not `fields: list[str]`.
-- Every returned comic must include `number`, `title`, `url`. The `url` is what the LLM cites; removing it breaks attribution under CC BY-SA 3.0.
-- Boot-time download + open read-only conn runs at import time unless `XKCD_SKIP_BOOTSTRAP=1` or pytest is detected (`"pytest" in sys.modules`). Do not bypass the pytest check; it is how tests avoid touching GitHub Releases.
-- There is no poll thread and no lock. `_conn` is set once at import. Tests monkeypatch it; runtime never mutates it. Do not reintroduce background swapping without a reason stronger than "updates feel slow" — the redeploy-on-release flow replaces what the poll thread used to do.
-- The server always downloads if `INDEX_PATH` does not exist. For local dev with a stale index, delete the file to force a refresh.
-</important>
-
-<important if="you are modifying the SQLite schema or sqlite-vec usage">
-- `chunk_vec` uses `distance_metric=cosine`. `query_top_k` orders by raw distance and returns bare comic numbers; the server no longer exposes a `similarity` score. Changing the metric silently breaks ranking.
-- Embeddings are L2-normalized at write time in `builder.encode` (`normalize_embeddings=True`). Do not re-normalize at query time.
-- Schema lives in `src/xkcd_search/schema.sql` and is applied on every `open_connection(..., read_only=False)`. Changing it invalidates every published release artifact until the next rebuild.
-</important>
-
-<important if="you are editing .github/workflows/index-daily.yml">
-- The `schedule: 0 5 * * *` plus `workflow_dispatch` combination is the only thing keeping the scheduled workflow from auto-disabling after 60 days of inactivity on a dormant repo.
-- The Hugging Face model cache key is `hf-hub-bge-small-en-v1.5`. If the embedding model changes, update both the cache key and the Dockerfile `EMBED_MODEL` build arg.
-- `concurrency: group: index-daily, cancel-in-progress: false`, keep this. Two overlapping indexers corrupt the release asset.
-- The final step calls the HF Spaces restart API (`POST /api/spaces/{repo}/restart`) which triggers a rebuild. The new container downloads the fresh Release asset on boot.
-- The actions/cache entry at `~/.cache/xkcd-search` is the partial-build cache. The builder is incremental: each run starts from yesterday's SQLite and only fetches new comics. Losing the cache forces a full rebuild (~1 hour).
-</important>
-
-## Licenses
-
-Code: Apache 2.0. Data (embeddings plus stored explainxkcd text): CC BY-SA 3.0. Attribution is delivered via the `url` field in every search result.
-
-## Agent skills
-
-### Issue tracker
-
-Issues and specs live as GitHub issues, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Five canonical role labels, each string equal to its name: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+- **Fail fast and loudly**: Do not swallow errors or boot empty fallback tables. If data is missing or connection fails, let it raise.
+- **Attribution**: Every search result must include `number`, `title`, and `url` to comply with CC BY-SA 3.0.
+- **Integration tests**: Tests hit real data and test fixtures. No mocks, no VCR cassettes.
+- **Async tests**: Pytest runs with `asyncio_mode = "auto"`. Write `async def test_...`.

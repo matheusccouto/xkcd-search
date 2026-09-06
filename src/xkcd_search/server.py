@@ -1,129 +1,35 @@
-"""FastMCP server exposing `search_xkcd`.
-
-On boot, downloads the latest `index.sqlite` GitHub Release asset and opens a
-read-only SQLite connection. No polling: the nightly indexer publishes a new
-Release and calls the HF Spaces restart API, which restarts this process and
-re-downloads the fresh artifact.
-
-`build_app()` composes this MCP endpoint at `/mcp` together with the search
-app at `/` into one ASGI app; the deployed boot path runs that composed app.
-"""
+"""FastMCP and REST API server for xkcd search."""
 
 from __future__ import annotations
 
-import logging
-import os
-import sqlite3
-import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastmcp import FastMCP
-from starlette.types import ASGIApp
+from starlette.responses import JSONResponse
 
-from xkcd_search.builder import INDEX_PATH, encode, new_client, open_connection, query_top_k
+from xkcd_search.search import SearchEngine
 
-LOGGER = logging.getLogger(__name__)
-
-GITHUB_REPO = "matheusccouto/xkcd-search"
-RELEASE_ASSET_URL = f"https://github.com/{GITHUB_REPO}/releases/latest/download/index.sqlite"
-
-mcp = FastMCP("xkcd-search")
-_conn: sqlite3.Connection | None = None
+if TYPE_CHECKING:
+    from starlette.applications import Starlette
+    from starlette.requests import Request
 
 
-def _download_index() -> None:
-    """Fetch the latest `index.sqlite` Release asset into INDEX_PATH.
+def create_server(engine: SearchEngine | None = None) -> tuple[FastMCP, Starlette]:
+    """Create FastMCP server and HTTP application backed by SearchEngine."""
+    search_engine = engine or SearchEngine()
 
-    Downloads straight from the `releases/latest/download/...` URL instead of
-    the GitHub API: the unauthenticated API rate-limits per-IP (60/hour), which
-    the shared egress IP of an HF Space exhausts quickly. The direct URL streams
-    from the asset CDN and is not rate-limited.
-    """
-    INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    tmp = INDEX_PATH.with_suffix(".tmp")
-    try:
-        with (
-            new_client(timeout=120.0, follow_redirects=True) as client,
-            client.stream("GET", RELEASE_ASSET_URL) as r,
-            tmp.open("wb") as f,
-        ):
-            r.raise_for_status()
-            for chunk in r.iter_bytes(1 << 20):
-                f.write(chunk)
-        tmp.rename(INDEX_PATH)
-    finally:
-        tmp.unlink(missing_ok=True)
+    mcp = FastMCP("xkcd-search")
 
+    @mcp.tool(name="search_xkcd")
+    def search_tool(query: str, k: int = 5) -> list[dict[str, Any]]:
+        """Semantic search over xkcd comics, ranked by relevance."""
+        return search_engine.search(query, k=k)
 
-def _bootstrap() -> sqlite3.Connection:
-    """Open the index read-only, downloading it first when missing.
+    @mcp.custom_route("/api/search", methods=["GET"])
+    @mcp.custom_route("/search", methods=["GET"])
+    async def search_api(request: Request) -> JSONResponse:
+        query = request.query_params.get("q", "")
+        k_val = int(request.query_params.get("k", "5"))
+        return JSONResponse(search_engine.search(query, k=k_val))
 
-    A failed download never crashes boot: the server comes up against an empty
-    schema-only index so the Space stays reachable, and the nightly rebuild's
-    redeploy replaces it with a fresh asset.
-    """
-    if INDEX_PATH.exists():
-        return open_connection(INDEX_PATH, read_only=True)
-    try:
-        _download_index()
-    except Exception:
-        LOGGER.exception(
-            "index download failed (%s); booting with an empty index", RELEASE_ASSET_URL
-        )
-    if not INDEX_PATH.exists():
-        open_connection(INDEX_PATH)
-    return open_connection(INDEX_PATH, read_only=True)
-
-
-@mcp.tool
-def search_xkcd(query: str, k: int = 5) -> list[dict[str, Any]]:
-    """Semantic search over xkcd comics, ranked by relevance to `query`.
-
-    Returns up to `k` comics, each with `number`, `title`, `url`, `image_url`,
-    `alt_text`, `transcript`, and `explanation`. Cite the `url` when referencing
-    a comic; explanations come from explainxkcd.com (CC BY-SA 3.0).
-    """
-    assert _conn is not None, "index not loaded"
-    k = max(1, min(int(k), 20))
-    numbers = query_top_k(_conn, encode([query])[0], k)
-    if not numbers:
-        return []
-    placeholders = ",".join("?" * len(numbers))
-    sql = (
-        "SELECT number, title, url, image_url, alt_text, transcript, explanation "
-        f"FROM comics WHERE number IN ({placeholders})"
-    )
-    rows = _conn.execute(sql, numbers).fetchall()
-    by_number = {r["number"]: r for r in rows}
-    return [dict(by_number[n]) for n in numbers if n in by_number]
-
-
-def build_app() -> ASGIApp:
-    """Compose the search app at `/` and the MCP endpoint at `/mcp` into one ASGI app.
-
-    Reuses the module-level `mcp` object and index connection. `gradio` is
-    imported only here, so server boot and the MCP test suite never pay its
-    import cost.
-    """
-    import gradio as gr
-    from fastapi import FastAPI
-    from starlette.routing import Route
-
-    from xkcd_search.search_app import build_ui
-
-    mcp_http_app = mcp.http_app(path="/mcp")
-    ui = build_ui()
-    app = FastAPI(
-        lifespan=mcp_http_app.lifespan,
-        docs_url=None,
-        openapi_url=None,
-        redoc_url=None,
-    )
-    # Register /mcp before mount_gradio_app mounts at "/": the "/" mount matches
-    # every path, so only registration order gives /mcp precedence.
-    app.router.routes.append(Route("/mcp", endpoint=mcp_http_app))
-    return gr.mount_gradio_app(app, ui, path="/")
-
-
-if "pytest" not in sys.modules and os.getenv("XKCD_SKIP_BOOTSTRAP") != "1":
-    _conn = _bootstrap()
+    return mcp, mcp.http_app(path="/mcp")

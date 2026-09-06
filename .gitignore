@@ -37,19 +37,9 @@ htmlcov/
 .coverage
 .coverage.*
 
-# VCR cassette scratch files
-tests/cassettes/*.yaml.new
-
-# Local secrets and env
-.env
-.env.*
-!.env.example
-
-# Built index artifact (distributed via GitHub Releases)
-index.sqlite
-index.sqlite-journal
-index.sqlite-wal
-index.sqlite-shm
+# Built index artifact
+lancedb/
+*.lance/
 
 # Editor
 .idea/

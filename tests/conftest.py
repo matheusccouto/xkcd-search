@@ -1,77 +1,76 @@
+"""Pytest fixtures for xkcd-search test suite."""
+
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 import pytest
 from fastmcp import Client
 
-from xkcd_search import server
-from xkcd_search.builder import (
+from xkcd_search import app as app_mod
+from xkcd_search.ingest import (
     fetch_explainxkcd,
     fetch_xkcd,
     new_client,
-    open_connection,
+    open_or_create_table,
     upsert_comic,
 )
+from xkcd_search.search import SearchEngine
+from xkcd_search.server import create_server
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from lancedb.table import Table
+    from starlette.applications import Starlette
 
 FIXTURE_NUMBERS = [3230, 353, 327]
 
 
 @pytest.fixture(scope="session")
-def built_index(tmp_path_factory):
-    """Build a tiny 3-comic SQLite index once per session.
-
-    No-op when `XKCD_TEST_URL` is set; cloud tests hit the live production index.
-    """
+def built_index(tmp_path_factory: pytest.TempPathFactory) -> Table | None:
+    """Build a tiny 3-comic LanceDB index once per session."""
     if os.getenv("XKCD_TEST_URL"):
-        yield None
-        return
+        return None
 
-    index_path = tmp_path_factory.mktemp("index") / "index.sqlite"
-    conn = open_connection(index_path)
+    lance_dir = tmp_path_factory.mktemp("lancedb")
+    table = open_or_create_table(lance_dir)
     with new_client() as c:
         for number in FIXTURE_NUMBERS:
             xkcd = fetch_xkcd(number, c)
             article = fetch_explainxkcd(number, c)
-            upsert_comic(conn, xkcd, article)
-    conn.close()
+            upsert_comic(table, xkcd, article)
 
-    read_conn = open_connection(index_path, read_only=True)
-    original, server._conn = server._conn, read_conn
-    yield read_conn
-    server._conn = original
-    read_conn.close()
+    return table
 
 
 @pytest.fixture
-async def mcp_client(built_index) -> AsyncIterator[Client]:
-    """In-process client by default; hits `XKCD_TEST_URL` when set.
+def search_engine(built_index: Table | None) -> SearchEngine:
+    """Return a SearchEngine using the test index."""
+    if built_index is None:
+        return SearchEngine()
+    return SearchEngine(table=built_index)
 
-    OAuth only for fastmcp.app hosts (browser consent runs on first use and the
-    token is cached under ~/.fastmcp/). Other deployments (HF Spaces, etc.) are
-    treated as anonymous HTTPS.
-    """
+
+@pytest.fixture
+async def mcp_client(search_engine: SearchEngine) -> AsyncIterator[Client]:
+    """Provide MCP client connected in-process or to live cloud."""
     url = os.getenv("XKCD_TEST_URL")
     if url:
         auth = "oauth" if "fastmcp.app" in url else None
-        async with Client(url, auth=auth) as c:
-            yield c
+        async with Client(url, auth=auth) as client:
+            yield client
     else:
-        async with Client(server.mcp) as c:
-            yield c
+        mcp, _ = create_server(search_engine)
+        async with Client(mcp) as client:
+            yield client
 
 
 @pytest.fixture
-def composed_app(built_index):
-    """The composed ASGI app: search app at `/`, MCP endpoint at `/mcp`.
-
-    Builds a fresh app per test so each test can run its lifespan inline in its
-    own task. No-op in cloud mode; cloud tests hit the live Space instead.
-    """
+def composed_app(search_engine: SearchEngine) -> Starlette | None:
+    """Provide composed ASGI app with Gradio, MCP, and REST."""
     if os.getenv("XKCD_TEST_URL"):
         return None
 
-    from xkcd_search.server import build_app
-
-    return build_app()
+    return app_mod.build_app(search_engine)

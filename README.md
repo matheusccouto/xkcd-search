@@ -8,98 +8,80 @@ app_port: 7860
 pinned: false
 ---
 
-# xkcd-search-mcp
+# xkcd-search
 
-Semantic search for xkcd comics, served over the Model Context Protocol. Given a
-natural-language prompt, the `search_xkcd` tool returns the top-K most relevant
-comics from the full xkcd archive, indexed daily against the explainxkcd.com
-wiki.
+Semantic search for xkcd comics across the full 3,000+ comic archive plus explainxkcd.com.
 
-## Connect
+Reachable four ways:
+1. **Web UI**: [https://couto-xkcd-search.hf.space](https://couto-xkcd-search.hf.space) (browse comic cards)
+2. **REST API**: `GET https://couto-xkcd-search.hf.space/api/search?q={query}&k={count}` (unauthenticated JSON API)
+3. **Agent Skill**: `.agents/skills/xkcd-search/SKILL.md` (installable via `npx skills add matheusccouto/xkcd-search-mcp`)
+4. **MCP Endpoint**: `https://couto-xkcd-search.hf.space/mcp` (for Claude Desktop, Cursor, and FastMCP clients)
 
-The public MCP endpoint:
+## REST API
 
+An unauthenticated endpoint for scripts, tools, and AI agents:
+
+```bash
+curl -s "https://couto-xkcd-search.hf.space/api/search?q=standards+universal&k=2"
 ```
-https://couto-xkcd-search.hf.space/mcp
+
+Response JSON:
+
+```json
+[
+  {
+    "number": 927,
+    "title": "Standards",
+    "url": "https://xkcd.com/927/",
+    "image_url": "https://imgs.xkcd.com/comics/standards.png",
+    "alt_text": "Fortunately, the charging one has been solved now that we've all standardized on mini-USB. USB 3.0 mini-B, that is. No, wait, micro-B. Ok, listen:...",
+    "transcript": "...",
+    "explanation": "..."
+  }
+]
 ```
 
-Point any MCP client (Claude Desktop, mcp-inspector, Cursor, etc.) at that URL.
-It is anonymous HTTPS; no OAuth or API key is required.
+## MCP Tool
 
-## The tool
+Connect any MCP client to `https://couto-xkcd-search.hf.space/mcp`:
 
 ```python
 search_xkcd(query: str, k: int = 5) -> list[dict]
 ```
 
-Semantic top-K lookup. Every result is a dict with `number`, `title`, `url`,
-`image_url`, `alt_text`, `transcript`, and `explanation`. Cite `url` when
-referencing a comic.
+Semantic top-K lookup. Every result is a dict with `number`, `title`, `url`, `image_url`, `alt_text`, `transcript`, and `explanation`. Cite `url` when referencing a comic.
 
 ## How it works
 
-1. A daily GitHub Actions job (`.github/workflows/index-daily.yml`) fetches
-   every xkcd comic's JSON and, when available, its explainxkcd wikitext.
-2. Each comic is split into a title chunk, a transcript chunk, and one chunk
-   per explainxkcd `== Section ==`. Long sections are split on paragraph breaks.
-3. Chunks are embedded with `BAAI/bge-small-en-v1.5` (384-dim, L2-normalized)
-   and written into a single `index.sqlite` file backed by `sqlite-vec`.
-4. The artifact is published as the `index.sqlite` asset on the repo's latest
-   GitHub Release, and the workflow calls the Hugging Face Spaces restart API
-   to trigger a rebuild.
-5. The composed app (`python -m xkcd_search.app`) downloads that asset on boot
-   and serves the search app at `/` next to the MCP endpoint at `/mcp`. Queries
-   run locally against the SQLite file; there is no background polling.
-
-There is no hosted database and no API key anywhere in the stack.
+1. A daily GitHub Actions job (`.github/workflows/index-daily.yml`) fetches new comics and explainxkcd wikitext.
+2. Chunks are embedded with `BAAI/bge-small-en-v1.5` via Hugging Face Serverless Inference.
+3. Records are stored in a **LanceDB** table and published directly to Hugging Face Datasets (`couto/xkcd`).
+4. The workflow calls the Hugging Face Spaces restart API to redeploy.
+5. The Space connects to the Lance dataset and serves the web UI at `/`, FastMCP at `/mcp`, and REST API at `/api/search`.
 
 ## Local development
 
 ```bash
 uv sync
-uv run pytest                                   # integration tests (in-process)
-uv run python -m xkcd_search.builder            # build a local index.sqlite (slow)
-uv run python -m xkcd_search.app                # run the composed app (search UI at /, MCP at /mcp)
-uv run fastmcp dev src/xkcd_search/server.py    # open the FastMCP inspector
+uv run pytest                                   # in-process integration tests
+uv run xkcd-ingest                             # build/update local LanceDB table
+uv run python -m xkcd_search.app                # run composed app (UI at /, MCP at /mcp, REST at /api/search)
+uv run fastmcp dev src/xkcd_search/server.py:mcp # open the FastMCP inspector
 ```
-
-The builder writes to `~/.cache/xkcd-search/index.sqlite`. Delete that file
-to force a re-download on the next server boot.
 
 ## Testing
 
 ```bash
 uv run pytest                                             # in-process integration
 XKCD_TEST_URL=https://couto-xkcd-search.hf.space/mcp \
-    uv run pytest tests/test_server.py                    # hit the live Space
+    uv run pytest tests/test_app.py                       # hit live Space
 ```
-
-Tests use an in-process `fastmcp.Client` against a 3-comic fixture index
-built once per session by fetching real data from xkcd.com and
-explainxkcd.com. Setting `XKCD_TEST_URL` redirects the suite at a deployed
-endpoint instead.
-
-## Hosting
-
-The server is designed to be dead simple to host: one Python process, one
-downloaded SQLite file. There is no database, no secrets, no credentials.
-
-Runs on Hugging Face Spaces (CPU Basic, free tier: 16 GB RAM, 2 vCPU) as a
-Docker-SDK Space. The `Dockerfile` at the repo root is the build recipe. The
-Space is linked to this GitHub repo, so every push to `main` triggers a rebuild.
-Spaces on the free tier cold-start after ~48 h idle; first request after a long
-sleep pays the wake-up latency.
 
 ## Attribution and licensing
 
-Search results are indexed from explainxkcd.com, licensed under
-[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). The generated
-index inherits that license; see `DATA_LICENSE`. When citing a result, link
-back to the comic's `url` and credit the explainxkcd contributors.
+Search results are indexed from explainxkcd.com, licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). When citing a result, link back to the comic's `url` and credit the explainxkcd contributors.
 
-Comic images remain the work of Randall Munroe, licensed under
-[CC BY-NC 2.5](https://xkcd.com/license.html). This project links to those
-images but never rehosts them.
+Comic images remain the work of Randall Munroe, licensed under [CC BY-NC 2.5](https://xkcd.com/license.html).
 
-The source code in this repository is licensed under
-[Apache 2.0](./LICENSE). See `NOTICE` for the full attribution stack.
+The source code in this repository is licensed under [Apache 2.0](./LICENSE).
