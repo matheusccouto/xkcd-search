@@ -1,32 +1,32 @@
-"""Build and update the LanceDB index from xkcd.com and explainxkcd.com."""
+"""Build and update the LanceDB index from explainxkcd.com."""
 
 from __future__ import annotations
 
 import logging
 import os
-import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import lancedb
-import lancedb.table
 import mwparserfromhell
 import pyarrow as pa
 from huggingface_hub import HfApi, InferenceClient, snapshot_download, upload_folder
 
-from xkcd_search.search import EMBED_MODEL
+from xkcd_search.retriever import EMBED_MODEL
+
+if TYPE_CHECKING:
+    from lancedb.table import Table
+    from mwparserfromhell.wikicode import Wikicode
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 LANCE_DIR = Path.home() / ".cache" / "xkcd-search" / "lancedb"
-XKCD_BASE = "https://xkcd.com"
-EXPLAIN_API = "https://www.explainxkcd.com/wiki/api.php"
-USER_AGENT = "xkcd-search (https://github.com/matheusccouto/xkcd-search-mcp)"
-SKIP_NUMBERS = {404}
-MIN_CHUNK_CHARS = 20
-MAX_CHUNK_CHARS = 2000
+XKCD = "https://xkcd.com"
+EXPLAIN = "https://www.explainxkcd.com/wiki/api.php"
+MAX_TEXT_CHARS = 2000
+SKIP_NUMBER = 404
 
 SCHEMA = pa.schema(
     [
@@ -37,48 +37,20 @@ SCHEMA = pa.schema(
         ("alt_text", pa.string()),
         ("transcript", pa.string()),
         ("explanation", pa.string()),
-        ("chunk_kind", pa.string()),
-        ("chunk_text", pa.string()),
         ("vector", pa.list_(pa.float32(), 384)),
     ]
 )
 
 
-def new_client(timeout: float = 30.0) -> httpx.Client:
-    """Create HTTP client with default headers and timeout."""
-    return httpx.Client(
-        headers={"User-Agent": USER_AGENT},
-        timeout=timeout,
-        follow_redirects=True,
-    )
-
-
-def fetch_latest_xkcd_number(client: httpx.Client) -> int:
-    """Fetch the latest comic number from xkcd.com."""
-    resp = client.get(f"{XKCD_BASE}/info.0.json")
-    resp.raise_for_status()
-    return int(resp.json()["num"])
-
-
-def fetch_xkcd(number: int, client: httpx.Client) -> dict[str, Any]:
-    """Fetch comic metadata by comic number."""
-    resp = client.get(f"{XKCD_BASE}/{number}/info.0.json")
-    resp.raise_for_status()
-    data = resp.json()
-    return {
-        "number": int(data["num"]),
-        "title": str(data.get("title", "")),
-        "url": f"{XKCD_BASE}/{number}/",
-        "image_url": str(data.get("img", "")),
-        "alt_text": str(data.get("alt", "")),
-        "transcript": str(data.get("transcript", "")),
-    }
+def new_client() -> httpx.Client:
+    """HTTP client for xkcd sites."""
+    return httpx.Client(timeout=30.0, follow_redirects=True)
 
 
 def fetch_explainxkcd(number: int, client: httpx.Client) -> str:
-    """Fetch explainxkcd article wikitext by comic number."""
+    """Fetch explainxkcd article wikitext by number."""
     resp = client.get(
-        EXPLAIN_API,
+        EXPLAIN,
         params={
             "action": "parse",
             "page": str(number),
@@ -87,39 +59,90 @@ def fetch_explainxkcd(number: int, client: httpx.Client) -> str:
             "format": "json",
         },
     )
-    if not resp.is_success:
-        return ""
-    data = resp.json()
-    return str(data.get("parse", {}).get("wikitext", {}).get("*", ""))
+    return str(resp.json()["parse"]["wikitext"]["*"])
 
 
-def chunk_comic(comic: dict[str, Any], wikitext: str) -> list[tuple[str, str]]:
-    """Break a comic and article into searchable (kind, text) chunks."""
-    chunks = [("title", comic["title"])]
-    if comic.get("transcript", "").strip():
-        chunks.append(("transcript", comic["transcript"].strip()))
-    if comic.get("alt_text", "").strip():
-        chunks.append(("alt_text", comic["alt_text"].strip()))
-
-    if wikitext:
-        parsed = mwparserfromhell.parse(wikitext)
-        for section in parsed.get_sections(flat=True, include_headings=True):
-            headings = section.filter_headings()
-            name = str(headings[0].title).strip().lower() if headings else "lead"
-            body = str(section.strip_code()).strip()
-            if len(body) >= MIN_CHUNK_CHARS:
-                chunks.append((f"section:{name}", body[:MAX_CHUNK_CHARS]))
-    return chunks
+def latest_comic_number(client: httpx.Client) -> int:
+    """Latest comic number, from the newest explainxkcd article."""
+    resp = client.get(
+        EXPLAIN,
+        params={
+            "action": "query",
+            "list": "recentchanges",
+            "rctype": "new",
+            "rcnamespace": "0",
+            "rclimit": "1",
+            "format": "json",
+        },
+    )
+    title = resp.json()["query"]["recentchanges"][0]["title"]
+    return int(title.split(":")[0])
 
 
-def encode(texts: list[str]) -> list[list[float]]:
-    """Compute embeddings for text chunks using HF Serverless Inference."""
+def parse_comic(number: int, wikitext: str) -> dict[str, Any]:
+    """Extract comic metadata from explainxkcd wikitext."""
+    parsed = mwparserfromhell.parse(wikitext)
+    fields = {
+        str(param.name).strip(): str(param.value).strip()
+        for param in parsed.filter_templates()[0].params
+    }
+    return {
+        "number": number,
+        "title": fields["title"],
+        "url": f"{XKCD}/{number}/",
+        "image": fields["image"],
+        "alt_text": fields["titletext"],
+        "transcript": transcript_of(parsed),
+        "explanation": str(parsed.strip_code()).strip(),
+    }
+
+
+def transcript_of(parsed: Wikicode) -> str:
+    """Plain text of the Transcript section, or empty string."""
+    for section in parsed.get_sections(flat=True, include_headings=True):
+        headings = section.filter_headings()
+        if headings and str(headings[0].title).strip().lower() == "transcript":
+            section.remove(headings[0])
+            return str(section.strip_code()).strip()
+    return ""
+
+
+def resolve_image(client: httpx.Client, filename: str) -> str:
+    """Resolve an explainxkcd image filename to a full URL."""
+    resp = client.get(
+        EXPLAIN,
+        params={
+            "action": "query",
+            "titles": f"File:{filename}",
+            "prop": "imageinfo",
+            "iiprop": "url",
+            "format": "json",
+        },
+    )
+    page = next(iter(resp.json()["query"]["pages"].values()))
+    return page["imageinfo"][0]["url"]
+
+
+def fetch_comic(client: httpx.Client, number: int) -> dict[str, Any]:
+    """Fetch and parse a comic from explainxkcd, including its image URL."""
+    comic = parse_comic(number, fetch_explainxkcd(number, client))
+    comic["image_url"] = resolve_image(client, comic.pop("image"))
+    return comic
+
+
+def comic_text(comic: dict[str, Any]) -> str:
+    """Searchable text: title, punchline, and explanation."""
+    parts = [comic["title"], comic["alt_text"], comic["explanation"]]
+    return "\n".join(p for p in parts if p.strip())[:MAX_TEXT_CHARS]
+
+
+def encode(text: str) -> list[float]:
+    """Embed text via Hugging Face Serverless Inference."""
     client = InferenceClient(token=os.getenv("HF_TOKEN"))
-    res = client.feature_extraction(texts, model=EMBED_MODEL)
-    return res.tolist() if hasattr(res, "tolist") else [list(v) for v in res]
+    return list(client.feature_extraction(text, model=EMBED_MODEL))
 
 
-def open_or_create_table(path: Path | str) -> lancedb.table.Table:
+def open_or_create_table(path: Path | str) -> Table:
     """Open existing LanceDB table or create a new one with schema."""
     Path(path).mkdir(parents=True, exist_ok=True)
     db = lancedb.connect(str(path))
@@ -128,94 +151,42 @@ def open_or_create_table(path: Path | str) -> lancedb.table.Table:
     return db.create_table("comics", schema=SCHEMA)
 
 
-def upsert_comic(
-    table: lancedb.table.Table,
-    comic: dict[str, Any],
-    article: str,
-) -> None:
-    """Upsert comic chunks and embeddings into LanceDB."""
-    chunks = chunk_comic(comic, article)
-    texts = [text for _, text in chunks]
-    vectors = encode(texts) if texts else []
-    explanation = (
-        str(mwparserfromhell.parse(article).strip_code()).strip() if article else ""
-    )
-
-    records = [
-        {
-            "number": comic["number"],
-            "title": comic["title"],
-            "url": comic["url"],
-            "image_url": comic["image_url"],
-            "alt_text": comic["alt_text"],
-            "transcript": comic["transcript"],
-            "explanation": explanation,
-            "chunk_kind": kind,
-            "chunk_text": text,
-            "vector": vec,
-        }
-        for (kind, text), vec in zip(chunks, vectors, strict=True)
-    ]
+def upsert_comic(table: Table, comic: dict[str, Any]) -> None:
+    """Embed and store a comic as a single searchable row."""
     table.delete(f"number = {comic['number']}")
-    if records:
-        table.add(records)
+    table.add([{**comic, "vector": encode(comic_text(comic))}])
 
 
-def main() -> int:
-    """Execute ingestion pipeline to update LanceDB and publish to Hugging Face."""
-    repo_id = os.environ.get("HF_DATASET_REPO")
+def main() -> None:
+    """Ingest all comics into LanceDB and publish to Hugging Face."""
+    repo = os.environ.get("HF_DATASET_REPO")
     token = os.environ.get("HF_TOKEN")
-    if repo_id and not token:
-        err_msg = "HF_TOKEN is required when HF_DATASET_REPO is configured"
-        raise KeyError(err_msg)
-
-    if repo_id and not (LANCE_DIR / "comics.lance").exists():
+    if repo and not (LANCE_DIR / "comics.lance").exists():
         api = HfApi(token=token)
-        if api.repo_exists(repo_id=repo_id, repo_type="dataset"):
-            logger.info("Restoring existing LanceDB dataset from %s...", repo_id)
+        if api.repo_exists(repo_id=repo, repo_type="dataset"):
+            logger.info("Restoring LanceDB dataset from %s...", repo)
             snapshot_download(
-                repo_id=repo_id,
-                repo_type="dataset",
-                local_dir=str(LANCE_DIR),
-                token=token,
+                repo_id=repo, repo_type="dataset", local_dir=str(LANCE_DIR), token=token
             )
 
     table = open_or_create_table(LANCE_DIR)
     with new_client() as client:
-        latest = fetch_latest_xkcd_number(client)
-        existing_numbers = (
-            set(table.to_arrow()["number"].to_pylist()) if len(table) > 0 else set()
-        )
-        logger.info(
-            "Latest comic: %s; already indexed: %s", latest, len(existing_numbers)
-        )
-
-        processed = 0
+        latest = latest_comic_number(client)
+        existing = set(table.to_arrow()["number"].to_pylist())
         for n in range(1, latest + 1):
-            if n in SKIP_NUMBERS or n in existing_numbers:
+            if n == SKIP_NUMBER or n in existing:
                 continue
-            comic = fetch_xkcd(n, client)
-            article = fetch_explainxkcd(n, client)
-            upsert_comic(table, comic, article)
-            processed += 1
-            if processed % 50 == 0:
-                logger.info("Processed %s comics (current: %s)", processed, n)
+            upsert_comic(table, fetch_comic(client, n))
+        logger.info("Indexed %s comics", len(table))
 
-    logger.info("Done: %s total chunks indexed", len(table))
-
-    if repo_id:
-        logger.info("Uploading to Hugging Face Dataset: %s...", repo_id)
+    if repo:
         api = HfApi(token=token)
-        api.create_repo(repo_id=repo_id, repo_type="dataset", exist_ok=True)
+        api.create_repo(repo_id=repo, repo_type="dataset", exist_ok=True)
         upload_folder(
-            repo_id=repo_id,
-            folder_path=str(LANCE_DIR),
-            repo_type="dataset",
-            token=token,
+            repo_id=repo, folder_path=str(LANCE_DIR), repo_type="dataset", token=token
         )
-        logger.info("Upload complete!")
-    return 0
+        logger.info("Uploaded to %s", repo)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

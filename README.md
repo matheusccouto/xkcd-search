@@ -72,7 +72,7 @@ fastmcp run https://couto-xkcd-search.hf.space/mcp
 ```
 
 Tool provided:
-- `search_xkcd(query: str, k: int = 5) -> list[dict]`
+- `search(query: str, k: int = 5) -> list[dict]`
 
 ### 3. Agent Skill
 Install the skill into agentic workflows:
@@ -86,7 +86,7 @@ Visit [https://couto-xkcd-search.hf.space](https://couto-xkcd-search.hf.space) t
 
 ## How it works
 
-1. **Scraping**: A nightly workflow checks for new comics on xkcd.com and explanations on explainxkcd.com.
+1. **Scraping**: A nightly workflow fetches new articles from explainxkcd.com.
 2. **Embedding**: Text chunks are embedded with `BAAI/bge-small-en-v1.5` via Hugging Face Serverless Inference.
 3. **Storage**: LanceDB dataset hosted on Hugging Face Datasets (`couto/xkcd`).
 4. **Serving**: A Docker Space runs FastMCP, Gradio, and Starlette on port 7860.

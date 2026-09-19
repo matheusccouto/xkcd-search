@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28.1",
     "huggingface-hub>=1.27.0",
     "lancedb>=0.38.0",
+    "langchain-core>=1.6.2",
     "mwparserfromhell>=0.7.2",
 ]
 

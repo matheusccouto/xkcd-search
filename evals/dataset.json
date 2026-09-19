@@ -1,110 +1,50 @@
 [
   {
-    "comic_number": 353,
-    "title": "Python",
-    "queries": [
-      "programming language so simple it feels like floating in the air",
-      "feeling like gravity no longer holds you back when coding",
-      "sudden superhuman developer productivity after switching languages"
-    ]
+    "number": 353,
+    "query": "sudden superhuman developer productivity after switching languages"
   },
   {
-    "comic_number": 327,
-    "title": "Exploits of a Mom",
-    "queries": [
-      "mother giving her child a name that breaks school software",
-      "database wiped out by entering code into a student registration form",
-      "sanitizing database queries to prevent malicious names"
-    ]
+    "number": 327,
+    "query": "mother giving her child a name that breaks school software"
   },
   {
-    "comic_number": 3230,
-    "title": "Overton",
-    "queries": [
-      "shifting boundaries of public discourse over time",
-      "literal interpretation of the window of acceptable political ideas",
-      "historical gravestone with dates and sunlight shifting acceptable opinions"
-    ]
+    "number": 3230,
+    "query": "shifting boundaries of public discourse over time"
   },
   {
-    "comic_number": 927,
-    "title": "Standards",
-    "queries": [
-      "everyone creating their own format instead of agreeing on one",
-      "attempting to unify different systems but just adding another",
-      "why do companies keep inventing new incompatible cables"
-    ]
+    "number": 927,
+    "query": "everyone creating their own format instead of agreeing on one"
   },
   {
-    "comic_number": 936,
-    "title": "Password Strength",
-    "queries": [
-      "why IT security forcing rules make passwords weaker",
-      "using dictionary phrases rather than arbitrary character substitutions",
-      "memorability of passwords vs difficulty for computers to guess"
-    ]
+    "number": 936,
+    "query": "why IT security forcing rules make passwords weaker"
   },
   {
-    "comic_number": 303,
-    "title": "Compiling",
-    "queries": [
-      "excuse for goofing off at work while waiting for automated build steps",
-      "why programmers duel with toy swords when waiting for builds",
-      "wasting company time because the computer is busy compiling"
-    ]
+    "number": 303,
+    "query": "excuse for goofing off at work while waiting for automated build steps"
   },
   {
-    "comic_number": 2405,
-    "title": "Flash Gatsby",
-    "queries": [
-      "old flash games disappearing while classic literature enters public domain",
-      "digital decay and obsolescence of early 2000s web animations",
-      "novel copyright expiring at midnight on new years day"
-    ]
+    "number": 2405,
+    "query": "old flash games disappearing while classic literature enters public domain"
   },
   {
-    "comic_number": 1852,
-    "title": "Election Map",
-    "queries": [
-      "presidential election results distorted by empty rural territory",
-      "popular vote versus geographic surface area in maps",
-      "why land area doesnt represent human voters on political graphics"
-    ]
+    "number": 1852,
+    "query": "presidential election results distorted by empty rural territory"
   },
   {
-    "comic_number": 2245,
-    "title": "Edible Arrangements",
-    "queries": [
-      "starving person looking at household decor as snacks",
-      "trying to consume household furniture during a hunger emergency",
-      "absurd interpretation of floral or gift basket deliveries"
-    ]
+    "number": 2245,
+    "query": "starving person looking at household decor as snacks"
   },
   {
-    "comic_number": 2224,
-    "title": "Software Updates",
-    "queries": [
-      "delay and latency trying to push bug fixes to an exploratory space probe",
-      "inability to update remote machinery because of light speed lag",
-      "everything becoming dependent on remote internet servers"
-    ]
+    "number": 2224,
+    "query": "delay and latency trying to push bug fixes to an exploratory space probe"
   },
   {
-    "comic_number": 3004,
-    "title": "Wells",
-    "queries": [
-      "homeowner looking for drinking water accidentally discovering petroleum",
-      "backyard shovel hitting black gold and causing a financial headache",
-      "unwanted crude oil contaminating a residential backyard"
-    ]
+    "number": 3004,
+    "query": "homeowner looking for drinking water accidentally discovering petroleum"
   },
   {
-    "comic_number": 2733,
-    "title": "Size Comparisons",
-    "queries": [
-      "comparing planetary orbits to everyday objects like ants in texas",
-      "unhelpful analogies for understanding astronomical distance",
-      "shrinking cosmic scales to state boundaries makes no sense"
-    ]
+    "number": 2733,
+    "query": "comparing planetary orbits to everyday objects like ants in texas"
   }
 ]

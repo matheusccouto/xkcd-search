@@ -2,7 +2,7 @@
 
 Semantic search over xkcd and explainxkcd, reachable four ways:
 1. Gradio search web app at `/`
-2. Remote FastMCP endpoint at `/mcp` (`search_xkcd`)
+2. Remote FastMCP endpoint at `/mcp` (`search`)
 3. Unauthenticated REST API at `/api/search?q={query}&k={count}`
 4. Agent Skill at `.agents/skills/xkcd-search/SKILL.md`
 
@@ -11,9 +11,10 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 
 ## Layout
 
-- `src/xkcd_search/search.py`: Core retrieval engine (`SearchEngine`), embedding generation, and LanceDB queries.
-- `src/xkcd_search/app.py`: FastMCP server (`search_xkcd`), REST endpoint (`/api/search`), Gradio web UI (`/`), and ASGI entry point.
-- `src/xkcd_search/ingest.py`: Scraping xkcd + explainxkcd, computing embeddings, and publishing to Hugging Face.
+- `src/xkcd_search/retriever.py`: Core semantic search retriever (`XKCDRetriever`), embedding generation, and LanceDB queries.
+- `src/xkcd_search/server.py`: FastMCP server (`search`) and REST endpoint (`/api/search`).
+- `src/xkcd_search/app.py`: Gradio web UI (`/`), mounting, and ASGI entry point.
+- `src/xkcd_search/ingest.py`: Scraping explainxkcd, computing embeddings, and publishing to Hugging Face.
 - `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
 - `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.
 - `evals/`: Retrieval quality benchmark suite (`test_retrieval.py`, `sampler.py`, `dataset.json`).
@@ -36,3 +37,8 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 - **Attribution**: Every search result must include `number`, `title`, and `url` to comply with CC BY-SA 3.0.
 - **Integration tests**: Tests hit real data and test fixtures. No mocks, no VCR cassettes.
 - **Async tests**: Pytest runs with `asyncio_mode = "auto"`. Write `async def test_...`.
+
+# References
+https://gofastmcp.com/llms.txt
+https://docs.lancedb.com/llms.txt
+https://docs.langchain.com/oss/python/langchain/llms.txt
