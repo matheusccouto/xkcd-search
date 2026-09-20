@@ -1,7 +1,7 @@
 [project]
 name = "xkcd-search"
 version = "0.1.0"
-description = "Semantic search for xkcd comics, served over MCP"
+description = "Semantic search for xkcd comics"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -17,7 +17,6 @@ dependencies = [
     "langchain-core>=1.6.2",
     "mwparserfromhell>=0.7.2",
 ]
-
 
 [project.urls]
 Homepage = "https://github.com/matheusccouto/xkcd-search-mcp"
@@ -39,26 +38,29 @@ exclude = [".agents"]
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D203",   # Incompatible with D211
-    "D213",   # Incompatible with D212
-    "COM812", # Incompatible with ruff format
-    "ISC001", # Incompatible with ruff format
-    "CPY001", # Missing copyright notice
+    "D203",  # Incompatible with D211
+    "D213",  # Incompatible with D212
+    "COM812",  # Incompatible with ruff format
+    "ISC001",  # Incompatible with ruff format
+    "CPY001",  # Missing copyright notice
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
-"evals/*" = ["S101", "T201"]
+"tests/*" = [
+    "S101",  # Checks for uses of the assert keyword
+    "PLR2004",  # Checks for the use of unnamed numerical constants ("magic") values in comparisons
+]
+"evals/*" = [
+    "S101",  # Checks for uses of the assert keyword
+    "PLR2004",  # Checks for the use of unnamed numerical constants ("magic") values in comparisons
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
-    "pytest-asyncio>=0.24",
-    "ruff>=0.15.11",
-    "ty>=0.0.31",
+    "pytest-asyncio>=0.24"
 ]

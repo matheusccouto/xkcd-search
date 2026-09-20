@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastmcp import FastMCP
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse
 
 from xkcd_search.retriever import XKCDRetriever
@@ -28,5 +29,9 @@ def search_tool(query: str, k: int = DEFAULT_K) -> list[dict[str, Any]]:
 async def search_api(request: Request) -> JSONResponse:
     """Return ranked search results as JSON."""
     query = request.query_params.get("q", "")
-    k = int(request.query_params.get("k", DEFAULT_K))
-    return JSONResponse([doc.metadata for doc in retriever.invoke(query, k=k)])
+    try:
+        k = int(request.query_params.get("k", DEFAULT_K))
+    except ValueError:
+        k = DEFAULT_K
+    docs = await run_in_threadpool(retriever.invoke, query, k=k)
+    return JSONResponse([doc.metadata for doc in docs])

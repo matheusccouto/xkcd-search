@@ -2,60 +2,67 @@
 
 from __future__ import annotations
 
-import os
-from typing import TYPE_CHECKING
-
+import lancedb
 import pytest
 
-from xkcd_search import app as app_mod
-from xkcd_search import server as server_mod
-from xkcd_search.ingest import (
-    fetch_comic,
-    new_client,
-    open_or_create_table,
-    upsert_comic,
-)
-from xkcd_search.retriever import XKCDRetriever
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-    from starlette.applications import Starlette
-
-FIXTURE_NUMBERS = (3230, 353, 327)
+TABLE_NAME = "comics"
+TABLE_DATA = [
+    {
+        "number": 1,
+        "title": "Comic One",
+        "url": "https://example.com/1/",
+        "image_url": "https://example.com/1.png",
+        "alt_text": "Alt text one",
+        "transcript": "Transcript one",
+        "explanation": "Explanation one",
+        "vector": [0.1] * 384,
+    },
+    {
+        "number": 2,
+        "title": "Comic Two",
+        "url": "https://example.com/2/",
+        "image_url": "https://example.com/2.png",
+        "alt_text": "Alt text two",
+        "transcript": "Transcript two",
+        "explanation": "Explanation two",
+        "vector": [0.2] * 384,
+    },
+    {
+        "number": 3,
+        "title": "Comic Three",
+        "url": "https://example.com/3/",
+        "image_url": "https://example.com/3.png",
+        "alt_text": "Alt text three",
+        "transcript": "Transcript three",
+        "explanation": "Explanation three",
+        "vector": [0.3] * 384,
+    },
+]
 
 
 @pytest.fixture(scope="session")
-def built_index(tmp_path_factory: pytest.TempPathFactory) -> str | None:
-    """Local LanceDB index path, or None for remote testing."""
-    if os.getenv("XKCD_TEST_URL"):
-        return None
-    lance_dir = tmp_path_factory.mktemp("lancedb")
-    table = open_or_create_table(lance_dir)
-    with new_client() as client:
-        for number in FIXTURE_NUMBERS:
-            upsert_comic(table, fetch_comic(client, number))
-    return str(lance_dir)
+def uri(tmp_path_factory: pytest.TempPathFactory) -> str:
+    """Local LanceDB URI seeded with sample comics."""
+    path = str(tmp_path_factory.mktemp("lancedb"))
+    lancedb.connect(path).create_table("comics", data=TABLE_DATA)
+    return path
+
+
+@pytest.fixture(autouse=True)
+def _test_env(uri: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set XKCD_DATASET_URI for each test, restored automatically."""
+    monkeypatch.setenv("XKCD_DATASET_URI", uri)
 
 
 @pytest.fixture
-def retriever(built_index: str | None) -> XKCDRetriever:
-    """Return a retriever over the local test index, or the default if remote."""
-    return XKCDRetriever(uri=built_index) if built_index else XKCDRetriever()
-
-
-@pytest.fixture
-def mcp_server(built_index: str | None) -> FastMCP | str:
-    """FastMCP server over the local index, or live URL for remote testing."""
-    if built_index:
-        server_mod.retriever.uri = built_index
-    return os.getenv("XKCD_TEST_URL") or server_mod.mcp
-
-
-@pytest.fixture
-def composed_app(built_index: str | None) -> Starlette | None:
-    """Composed ASGI app over the local index, or None for remote testing."""
-    if built_index:
-        server_mod.retriever.uri = built_index
-    if os.getenv("XKCD_TEST_URL"):
-        return None
-    return app_mod.app
+def expected_fields() -> set[str]:
+    """Return expected metadata fields in search results."""
+    return {
+        "number",
+        "title",
+        "url",
+        "image_url",
+        "alt_text",
+        "transcript",
+        "explanation",
+    }

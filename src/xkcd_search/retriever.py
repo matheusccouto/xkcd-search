@@ -21,7 +21,6 @@ DEFAULT_LANCE_URI = "hf://datasets/couto/xkcd"
 class XKCDRetriever(BaseRetriever):
     """Retriever for xkcd comics using LanceDB and Hugging Face Inference API."""
 
-    uri: str = DEFAULT_LANCE_URI
     k: int = 5
 
     @property
@@ -34,7 +33,8 @@ class XKCDRetriever(BaseRetriever):
         """Connect to LanceDB once, cached on first access."""
         token = os.getenv("HF_TOKEN")
         storage_options = {"token": token} if token else None
-        db = lancedb.connect(self.uri, storage_options=storage_options)
+        uri = os.getenv("XKCD_DATASET_URI", DEFAULT_LANCE_URI)
+        db = lancedb.connect(uri, storage_options=storage_options)
         return db.open_table("comics")
 
     def encode(self, query: str) -> list[float]:

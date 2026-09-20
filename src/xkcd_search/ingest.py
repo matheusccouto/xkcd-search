@@ -153,8 +153,13 @@ def open_or_create_table(path: Path | str) -> Table:
 
 def upsert_comic(table: Table, comic: dict[str, Any]) -> None:
     """Embed and store a comic as a single searchable row."""
-    table.delete(f"number = {comic['number']}")
-    table.add([{**comic, "vector": encode(comic_text(comic))}])
+    data = [{**comic, "vector": encode(comic_text(comic))}]
+    (
+        table.merge_insert("number")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(data)
+    )
 
 
 def main() -> None:
@@ -172,7 +177,9 @@ def main() -> None:
     table = open_or_create_table(LANCE_DIR)
     with new_client() as client:
         latest = latest_comic_number(client)
-        existing = set(table.to_arrow()["number"].to_pylist())
+        existing = set(
+            table.search().select(["number"]).to_arrow()["number"].to_pylist()
+        )
         for n in range(1, latest + 1):
             if n == SKIP_NUMBER or n in existing:
                 continue
