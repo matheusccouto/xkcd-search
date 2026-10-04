@@ -5,6 +5,9 @@ CLAUDE.local.md
 # DeepEval
 .deepeval/
 
+# Environment variables
+.env
+
 # LanceDB
 .lance
 

@@ -17,16 +17,15 @@ Live endpoint: `https://couto-xkcd-search.hf.space`.
 - `src/xkcd_search/ingest.py`: Scraping explainxkcd, computing embeddings, and publishing to Hugging Face.
 - `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
 - `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.
-- `evals/`: Retrieval quality benchmark suite (`test_retrieval.py`, `sampler.py`, `dataset.json`).
+- `evals/`: Retrieval quality benchmark suite (`test_benchmark.py`, `sampler.py`, `dataset.json`).
 - `.github/workflows/index-daily.yml`: Nightly build, upload to HF dataset, and Space redeploy.
 
 ## Commands
 
 - `uv sync`: Install dependencies.
 - `uv run pytest`: Run test suite.
-- `uv run pytest evals/`: Run retrieval evaluation benchmark suite (local or remote with `XKCD_TEST_URL`).
-- `uv run python -m evals.test_retrieval`: Print aggregated evaluation metrics report (`--url` for remote).
-- `uv run python -m evals.sampler --count 3`: Sample random comics from LanceDB to template new entries.
+- `uv run pytest evals/`: Run retrieval benchmark suite (reports Hit@1, Hit@3, Hit@5, MRR directly in pytest summary).
+- `uv run python -m evals.sampler --count 3`: Sample random comics from explainxkcd to template new entries.
 - `uvx ruff check . && uvx ruff format --check . && uvx ty check`: Lint and typecheck.
 - `uv run xkcd-ingest`: Rebuild or update LanceDB index.
 - `uv run python -m xkcd_search.app`: Run local server on port 7860.

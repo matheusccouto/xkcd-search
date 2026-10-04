@@ -1,50 +1,202 @@
 [
   {
     "number": 353,
-    "query": "sudden superhuman developer productivity after switching languages"
+    "query": "excitement over a new programming language"
   },
   {
-    "number": 327,
-    "query": "mother giving her child a name that breaks school software"
+    "number": 844,
+    "query": "clean code vs shipping fast"
   },
   {
-    "number": 3230,
-    "query": "shifting boundaries of public discourse over time"
-  },
-  {
-    "number": 927,
-    "query": "everyone creating their own format instead of agreeing on one"
-  },
-  {
-    "number": 936,
-    "query": "why IT security forcing rules make passwords weaker"
+    "number": 1683,
+    "query": "digital photo compression artifacts"
   },
   {
     "number": 303,
-    "query": "excuse for goofing off at work while waiting for automated build steps"
+    "query": "waiting for code to compile"
   },
   {
-    "number": 2405,
-    "query": "old flash games disappearing while classic literature enters public domain"
+    "number": 378,
+    "query": "real programmers use text editor"
   },
   {
-    "number": 1852,
-    "query": "presidential election results distorted by empty rural territory"
+    "number": 974,
+    "query": "building an overengineered general solution"
   },
   {
-    "number": 2245,
-    "query": "starving person looking at household decor as snacks"
+    "number": 1205,
+    "query": "time spent optimizing vs time saved"
+  },
+  {
+    "number": 1296,
+    "query": "deteriorating git commit messages"
+  },
+  {
+    "number": 1597,
+    "query": "nobody understands how git works"
+  },
+  {
+    "number": 208,
+    "query": "solving problems with regular expressions"
+  },
+  {
+    "number": 1168,
+    "query": "forgetting tar command flags"
+  },
+  {
+    "number": 1319,
+    "query": "overhead of maintaining automation"
+  },
+  {
+    "number": 1425,
+    "query": "computer vision is surprisingly hard"
+  },
+  {
+    "number": 1739,
+    "query": "fixing one problem creates another"
+  },
+  {
+    "number": 221,
+    "query": "hardcoded random number function"
+  },
+  {
+    "number": 257,
+    "query": "transmitting binary over voice"
+  },
+  {
+    "number": 936,
+    "query": "memorable strong passwords"
+  },
+  {
+    "number": 1354,
+    "query": "heartbleed buffer overread vulnerability"
+  },
+  {
+    "number": 327,
+    "query": "database sql injection exploit"
+  },
+  {
+    "number": 2176,
+    "query": "how account hacking actually works"
+  },
+  {
+    "number": 538,
+    "query": "rubber hose cryptanalysis"
+  },
+  {
+    "number": 1172,
+    "query": "bug fix breaks user workflow"
+  },
+  {
+    "number": 1286,
+    "query": "encrypting passwords instead of hashing"
+  },
+  {
+    "number": 1444,
+    "query": "the cloud is someone elses computer"
+  },
+  {
+    "number": 1926,
+    "query": "rationalizing terrible code quality"
+  },
+  {
+    "number": 149,
+    "query": "needing root permissions"
+  },
+  {
+    "number": 612,
+    "query": "inaccurate file transfer time estimate"
+  },
+  {
+    "number": 806,
+    "query": "bypassing tier one tech support"
+  },
+  {
+    "number": 927,
+    "query": "too many competing standards"
+  },
+  {
+    "number": 1988,
+    "query": "using docker containers for everything"
+  },
+  {
+    "number": 705,
+    "query": "sysadmin obsession with server uptime"
+  },
+  {
+    "number": 2054,
+    "query": "fragile enterprise data pipeline"
+  },
+  {
+    "number": 2347,
+    "query": "open source single maintainer risk"
+  },
+  {
+    "number": 435,
+    "query": "hierarchy of scientific purity"
+  },
+  {
+    "number": 552,
+    "query": "confusing correlation with causation"
+  },
+  {
+    "number": 605,
+    "query": "naive extrapolation of linear trends"
+  },
+  {
+    "number": 1138,
+    "query": "heatmap is just population density"
+  },
+  {
+    "number": 1838,
+    "query": "how machine learning actually works"
+  },
+  {
+    "number": 2048,
+    "query": "fitting curves to noisy data"
+  },
+  {
+    "number": 882,
+    "query": "false positive statistical significance"
+  },
+  {
+    "number": 1447,
+    "query": "meta-analysis of contradictory studies"
+  },
+  {
+    "number": 242,
+    "query": "scientific curiosity vs self preservation"
+  },
+  {
+    "number": 2562,
+    "query": "international date format confusion"
+  },
+  {
+    "number": 1053,
+    "query": "celebrating someone learning common knowledge"
+  },
+  {
+    "number": 386,
+    "query": "losing sleep over online arguments"
+  },
+  {
+    "number": 915,
+    "query": "downside of becoming a connoisseur"
   },
   {
     "number": 2224,
-    "query": "delay and latency trying to push bug fixes to an exploratory space probe"
+    "query": "software update breaks existing features"
   },
   {
-    "number": 3004,
-    "query": "homeowner looking for drinking water accidentally discovering petroleum"
+    "number": 2245,
+    "query": "awkward edible gift ideas"
+  },
+  {
+    "number": 1872,
+    "query": "having the backup of a backup"
   },
   {
     "number": 2733,
-    "query": "comparing planetary orbits to everyday objects like ants in texas"
+    "query": "absurd scale comparison analogies"
   }
 ]

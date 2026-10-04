@@ -115,13 +115,10 @@ uv run python -m xkcd_search.app
 Run retrieval quality benchmarks over natural queries against the evaluation corpus:
 
 ```bash
-# Run pytest evaluation suite
+# Run benchmark suite and view retrieval metrics report (Hit@1, Hit@3, Hit@5, MRR)
 uv run pytest evals/
 
-# Run benchmark report (Hit@1, Hit@3, Hit@5, MRR)
-uv run python -m evals.test_retrieval
-
-# Sample random comics from the index to template new entries in dataset.json
+# Sample random comics from explainxkcd to template new entries in dataset.json
 uv run python -m evals.sampler --count 3
 ```
 

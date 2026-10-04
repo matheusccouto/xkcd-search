@@ -2443,6 +2443,7 @@ dependencies = [
     { name = "lancedb" },
     { name = "langchain-core" },
     { name = "mwparserfromhell" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -2460,6 +2461,7 @@ requires-dist = [
     { name = "lancedb", specifier = ">=0.38.0" },
     { name = "langchain-core", specifier = ">=1.6.2" },
     { name = "mwparserfromhell", specifier = ">=0.7.2" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
