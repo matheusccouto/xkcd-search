@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from xkcd_search.models import Comic
-from xkcd_search.scraper import ExplainXKCDScraper, ScraperError
+from xkcd_search.scraper import ExplainXKCDScraper, ScraperError, parse_comic_wikitext
 
 SAMPLE_WIKITEXT = """{{comic
 | number = 1
@@ -132,3 +132,19 @@ def test_scraper_context_manager(scraper: ExplainXKCDScraper) -> None:
     with scraper as s:
         comic = s.fetch_comic(1)
         assert comic.number == 1
+
+
+def test_parse_comic_wikitext_strips_inline_comments() -> None:
+    """Verify parse_comic_wikitext cleans HTML comments from template fields."""
+    wikitext = """{{comic
+| number = 1608
+| title = Hoverboard <!--comment-->
+| image = hoverboard.png <!--another comment-->
+| titletext = Some text
+}}
+== Explanation ==
+Hoverboard explanation.
+"""
+    parsed = parse_comic_wikitext(1608, wikitext)
+    assert parsed.title == "Hoverboard"
+    assert parsed.image_filename == "hoverboard.png"

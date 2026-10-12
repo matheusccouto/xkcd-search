@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import click
 from huggingface_hub import HfApi, upload_folder
@@ -41,12 +42,13 @@ def ingest_missing_comics(
         return 0
 
     total_indexed = 0
-    for i in range(0, len(missing), batch_size):
-        batch = missing[i : i + batch_size]
-        comics = [scraper.fetch_comic(n) for n in batch]
-        search_index.index(comics)
-        total_indexed += len(comics)
-        logger.info("Indexed %d/%d missing comics", total_indexed, len(missing))
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        for i in range(0, len(missing), batch_size):
+            batch = missing[i : i + batch_size]
+            comics = list(executor.map(scraper.fetch_comic, batch))
+            search_index.index(comics)
+            total_indexed += len(comics)
+            logger.info("Indexed %d/%d missing comics", total_indexed, len(missing))
 
     return total_indexed
 

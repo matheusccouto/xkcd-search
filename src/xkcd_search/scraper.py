@@ -43,7 +43,9 @@ def parse_comic_wikitext(number: int, wikitext: str) -> ParsedWikitext:
         raise ScraperError(msg)
 
     template = templates[0]
-    fields = {str(p.name).strip(): str(p.value).strip() for p in template.params}
+    fields = {
+        str(p.name).strip(): str(p.value.strip_code()).strip() for p in template.params
+    }
     title = fields.get("title")
     image = fields.get("image")
     alt_text = fields.get("titletext", "")
