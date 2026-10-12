@@ -26,7 +26,7 @@ Live endpoint: `https://couto-xkcd-search.hf.space`
 ```bash
 uv sync                                                       # Install dependencies
 uv run pytest                                                 # Run test suite
-uv run pytest evals/                                          # Run retrieval benchmark
+uv run --env-file .env pytest evals/                          # Run retrieval benchmark
 uvx ruff check . && uvx ruff format --check . && uvx ty check  # Lint and typecheck
 uv run xkcd-ingest                                            # Update index
 uv run -m xkcd_search.app                                     # Start server on :7860

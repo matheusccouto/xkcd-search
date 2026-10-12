@@ -3,7 +3,7 @@
 ## Commands
 
 - `uv run pytest`: Run test suite.
-- `uv run pytest evals/`: Run retrieval benchmark suite.
+- `uv run --env-file .env pytest evals/`: Run retrieval benchmark suite.
 - `uvx ruff check .`: Lint code.
 - `uvx ruff format --check .`: Check formatting.
 - `uvx ty check`: Typecheck.
