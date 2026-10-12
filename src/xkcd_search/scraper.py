@@ -13,6 +13,8 @@ from xkcd_search.models import SKIP_NUMBER, Comic
 if TYPE_CHECKING:
     from types import TracebackType
 
+    from mwparserfromhell.nodes import Template
+
 EXPLAIN_API = "https://www.explainxkcd.com/wiki/api.php"
 XKCD_BASE = "https://xkcd.com"
 
@@ -32,6 +34,17 @@ class ParsedWikitext:
     explanation: str
 
 
+def extract_image_filename(template: Template) -> str:
+    """Extract comic image filename from image field or custom markup."""
+    if template.has("image"):
+        return str(template.get("image").value.strip_code()).strip()
+    if template.has("custom"):
+        for link in template.get("custom").value.filter_wikilinks():
+            if str(link.title).lower().startswith("file:"):
+                return str(link.title).split(":", maxsplit=1)[1].strip()
+    return ""
+
+
 def parse_comic_wikitext(number: int, wikitext: str) -> ParsedWikitext:
     """Parse raw explainxkcd wikitext into comic attributes."""
     parsed = mwparserfromhell.parse(wikitext)
@@ -47,19 +60,7 @@ def parse_comic_wikitext(number: int, wikitext: str) -> ParsedWikitext:
         str(p.name).strip(): str(p.value.strip_code()).strip() for p in template.params
     }
     title = fields.get("title")
-    image = fields.get("image")
-    if not image and "custom" in fields:
-        for param in template.params:
-            if str(param.name).strip() == "custom":
-                custom_parsed = mwparserfromhell.parse(str(param.value))
-                file_links = [
-                    w
-                    for w in custom_parsed.filter_wikilinks()
-                    if str(w.title).lower().startswith("file:")
-                ]
-                if file_links:
-                    image = str(file_links[0].title).split(":", maxsplit=1)[1].strip()
-                break
+    image = extract_image_filename(template)
     alt_text = fields.get("titletext", "")
 
     if not title or not image:
