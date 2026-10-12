@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import gradio as gr
 import uvicorn
@@ -25,7 +26,7 @@ def on_search(q: str, count: float) -> list[tuple[str, str]]:
 with gr.Blocks(title="xkcd search") as ui:
     gr.Markdown("# xkcd search")
     with gr.Row():
-        query = gr.Textbox(
+        query: Any = gr.Textbox(
             label="Query",
             placeholder="e.g. a comic about the overton window",
             lines=2,
@@ -39,7 +40,7 @@ with gr.Blocks(title="xkcd search") as ui:
             precision=0,
             scale=1,
         )
-    submit = gr.Button("Search", variant="primary")
+    submit: Any = gr.Button("Search", variant="primary")
     results = gr.Gallery(label="Results", columns=3)
 
     submit.click(on_search, inputs=[query, count], outputs=results)
