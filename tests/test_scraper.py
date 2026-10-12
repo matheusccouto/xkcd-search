@@ -148,3 +148,19 @@ Hoverboard explanation.
     parsed = parse_comic_wikitext(1608, wikitext)
     assert parsed.title == "Hoverboard"
     assert parsed.image_filename == "hoverboard.png"
+
+
+def test_parse_comic_wikitext_custom_field() -> None:
+    """Verify parse_comic_wikitext extracts image from custom parameter."""
+    wikitext = """{{comic
+| number = 1331
+| title = Frequency
+| custom = <table><tr><td>[[File:heartbeat.gif]]</td></tr></table>
+| titletext = Some text
+}}
+== Explanation ==
+Frequency explanation.
+"""
+    parsed = parse_comic_wikitext(1331, wikitext)
+    assert parsed.title == "Frequency"
+    assert parsed.image_filename == "heartbeat.gif"

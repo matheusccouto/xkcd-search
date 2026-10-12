@@ -48,6 +48,18 @@ def parse_comic_wikitext(number: int, wikitext: str) -> ParsedWikitext:
     }
     title = fields.get("title")
     image = fields.get("image")
+    if not image and "custom" in fields:
+        for param in template.params:
+            if str(param.name).strip() == "custom":
+                custom_parsed = mwparserfromhell.parse(str(param.value))
+                file_links = [
+                    w
+                    for w in custom_parsed.filter_wikilinks()
+                    if str(w.title).lower().startswith("file:")
+                ]
+                if file_links:
+                    image = str(file_links[0].title).split(":", maxsplit=1)[1].strip()
+                break
     alt_text = fields.get("titletext", "")
 
     if not title or not image:
