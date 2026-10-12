@@ -7,18 +7,18 @@ import os
 import gradio as gr
 import uvicorn
 
-from xkcd_search.server import mcp, retriever
+from xkcd_search.server import mcp, search_index
 
 
 def on_search(q: str, count: float) -> list[tuple[str, str]]:
     """Return (image, caption) pairs for the query."""
-    docs = retriever.invoke(q, k=int(count))
+    comics = search_index.search(q, k=int(count))
     return [
         (
-            d.metadata["image_url"],
-            f"#{d.metadata['number']} {d.metadata['title']} ({d.metadata['url']})",
+            c.image_url,
+            f"#{c.number} {c.title} ({c.url})",
         )
-        for d in docs
+        for c in comics
     ]
 
 

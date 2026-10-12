@@ -1,43 +1,18 @@
 # xkcd-search-mcp
 
-Semantic search over xkcd and explainxkcd, reachable four ways:
-1. Gradio search web app at `/`
-2. Remote FastMCP endpoint at `/mcp` (`search`)
-3. Unauthenticated REST API at `/api/search?q={query}&k={count}`
-4. Agent Skill at `.agents/skills/xkcd-search/SKILL.md`
-
-Corpus is indexed in LanceDB and hosted on Hugging Face Datasets (`couto/xkcd`).
-Live endpoint: `https://couto-xkcd-search.hf.space`.
-
-## Layout
-
-- `src/xkcd_search/retriever.py`: Core semantic search retriever (`XKCDRetriever`), embedding generation, and LanceDB queries.
-- `src/xkcd_search/server.py`: FastMCP server (`search`) and REST endpoint (`/api/search`).
-- `src/xkcd_search/app.py`: Gradio web UI (`/`), mounting, and ASGI entry point.
-- `src/xkcd_search/ingest.py`: Scraping explainxkcd, computing embeddings, and publishing to Hugging Face.
-- `.agents/skills/xkcd-search/SKILL.md`: Agent skill definition (installable via `npx skills add`).
-- `tests/test_app.py`: Core integration tests covering search, UI, MCP, and REST API.
-- `evals/`: Retrieval quality benchmark suite (`test_benchmark.py`, `sampler.py`, `dataset.json`).
-- `.github/workflows/index-daily.yml`: Nightly build, upload to HF dataset, and Space redeploy.
-
 ## Commands
 
-- `uv sync`: Install dependencies.
 - `uv run pytest`: Run test suite.
-- `uv run pytest evals/`: Run retrieval benchmark suite (reports Hit@1, Hit@3, Hit@5, MRR directly in pytest summary).
-- `uv run python -m evals.sampler --count 3`: Sample random comics from explainxkcd to template new entries.
-- `uvx ruff check . && uvx ruff format --check . && uvx ty check`: Lint and typecheck.
-- `uv run xkcd-ingest`: Rebuild or update LanceDB index.
-- `uv run python -m xkcd_search.app`: Run local server on port 7860.
+- `uv run pytest evals/`: Run retrieval benchmark suite.
+- `uvx ruff check .`: Lint code.
+- `uvx ruff format --check .`: Check formatting.
+- `uvx ty check`: Typecheck.
+- `uv run xkcd-ingest`: Ingest missing comics into LanceDB.
+- `uv run -m xkcd_search.app`: Run local server on port 7860.
 
-## Core Rules
+## Standards
 
-- **Fail fast and loudly**: Do not swallow errors or boot empty fallback tables. If data is missing or connection fails, let it raise.
-- **Attribution**: Every search result must include `number`, `title`, and `url` to comply with CC BY-SA 3.0.
-- **Integration tests**: Tests hit real data and test fixtures. No mocks, no VCR cassettes.
-- **Async tests**: Pytest runs with `asyncio_mode = "auto"`. Write `async def test_...`.
-
-# References
-https://gofastmcp.com/llms.txt
-https://docs.lancedb.com/llms.txt
-https://docs.langchain.com/oss/python/langchain/llms.txt
+- Code is read far more often than written; optimize for readability and clear reading sequence.
+- Prefer explicit and simple over clever or nested abstractions.
+- Fail fast and loudly; never swallow errors or add silent fallbacks.
+- Test with real data and fixtures only; no mocks.

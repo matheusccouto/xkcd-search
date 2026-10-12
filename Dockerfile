@@ -17,4 +17,4 @@ RUN uv sync --frozen --no-dev
 ENV PORT=7860
 EXPOSE 7860
 
-CMD ["uv", "run", "python", "-m", "xkcd_search.app"]
+CMD ["uv", "run", "-m", "xkcd_search.app"]

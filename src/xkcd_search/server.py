@@ -8,7 +8,7 @@ from fastmcp import FastMCP
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse
 
-from xkcd_search.retriever import XKCDRetriever
+from xkcd_search.index import SearchIndex
 
 if TYPE_CHECKING:
     from starlette.requests import Request
@@ -16,13 +16,14 @@ if TYPE_CHECKING:
 DEFAULT_K = 5
 
 mcp = FastMCP("xkcd-search")
-retriever = XKCDRetriever()
+search_index = SearchIndex()
 
 
 @mcp.tool(name="search")
 def search_tool(query: str, k: int = DEFAULT_K) -> list[dict[str, Any]]:
     """Semantic search over xkcd comics, ranked by relevance."""
-    return [doc.metadata for doc in retriever.invoke(query, k=k)]
+    comics = search_index.search(query, k=k)
+    return [c.to_dict() for c in comics]
 
 
 @mcp.custom_route("/api/search", methods=["GET"])
@@ -33,5 +34,5 @@ async def search_api(request: Request) -> JSONResponse:
         k = int(request.query_params.get("k", DEFAULT_K))
     except ValueError:
         k = DEFAULT_K
-    docs = await run_in_threadpool(retriever.invoke, query, k=k)
-    return JSONResponse([doc.metadata for doc in docs])
+    comics = await run_in_threadpool(search_index.search, query, k=k)
+    return JSONResponse([c.to_dict() for c in comics])

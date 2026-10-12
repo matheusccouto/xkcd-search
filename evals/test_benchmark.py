@@ -7,16 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from dotenv import load_dotenv
 
-from xkcd_search.retriever import XKCDRetriever
+from xkcd_search.index import SearchIndex
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-load_dotenv()
-
 DATASET_PATH = Path(__file__).parent / "dataset.json"
+search_index = SearchIndex()
 
 
 def load_cases() -> list[dict[str, Any]]:
@@ -25,8 +23,8 @@ def load_cases() -> list[dict[str, Any]]:
 
 
 def search(query: str) -> list[int]:
-    """Retrieve top-5 comic numbers for a query using XKCDRetriever."""
-    return [doc.metadata["number"] for doc in XKCDRetriever(k=5).invoke(query)]
+    """Retrieve top-5 comic numbers for a query using SearchIndex."""
+    return [c.number for c in search_index.search(query, k=5)]
 
 
 @pytest.mark.parametrize("case", load_cases())
