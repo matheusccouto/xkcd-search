@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 
-from starlette.testclient import TestClient
+import httpx
 
 from xkcd_search.app import app, on_search
 
@@ -18,9 +18,10 @@ def test_on_search() -> None:
     assert "#" in caption
 
 
-def test_root_serves_gradio_ui() -> None:
+async def test_root_serves_gradio_ui() -> None:
     """Ensure root path serves the Gradio interface."""
-    with TestClient(app) as client:
-        resp = client.get("/")
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/")
     assert resp.status_code == HTTPStatus.OK
     assert "xkcd search" in resp.text
