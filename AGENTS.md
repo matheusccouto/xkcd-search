@@ -1,4 +1,4 @@
-# xkcd-search-mcp
+# xkcd-search
 
 ## Commands
 

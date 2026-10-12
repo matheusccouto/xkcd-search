@@ -19,8 +19,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/matheusccouto/xkcd-search-mcp"
-Repository = "https://github.com/matheusccouto/xkcd-search-mcp"
+Homepage = "https://couto-xkcd-search.hf.space"
+Repository = "https://github.com/matheusccouto/xkcd-search"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.13.0"]

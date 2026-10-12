@@ -16,7 +16,7 @@ Live endpoint: `https://couto-xkcd-search.hf.space`
 - **Web UI**: [`/`](https://couto-xkcd-search.hf.space)
 - **MCP Server**: [`/mcp`](https://couto-xkcd-search.hf.space/mcp) (`search(query, k=5)`)
 - **REST API**: `GET /api/search?q={query}&k={count}`
-- **Agent Skill**: `npx skills add matheusccouto/xkcd-search-mcp`
+- **Agent Skill**: `npx skills add matheusccouto/xkcd-search`
 
 ## Development
 
