@@ -23,7 +23,7 @@ Homepage = "https://couto-xkcd-search.hf.space"
 Repository = "https://github.com/matheusccouto/xkcd-search"
 
 [build-system]
-requires = ["uv_build>=0.8.17,<0.13.0"]
+requires = ["uv_build>=0.8.17,<0.14.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
