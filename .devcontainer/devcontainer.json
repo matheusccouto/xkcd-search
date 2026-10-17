@@ -3,10 +3,13 @@
   "image": "mcr.microsoft.com/devcontainers/universal:2",
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteEnv": {
-    "PATH": "${containerEnv:PATH}:/home/codespace/.opencode/bin"
+    "PATH": "${containerEnv:PATH}:/home/codespace/.local/bin:/home/codespace/.opencode/bin:/home/vscode/.local/bin:/home/vscode/.opencode/bin"
   },
   "customizations": {
     "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+      },
       "extensions": [
         "ms-python.python",
         "charliermarsh.ruff"
