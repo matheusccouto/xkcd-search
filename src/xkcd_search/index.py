@@ -160,20 +160,21 @@ class SearchIndex:
         comic_rows = self.comics_table.search().where(filter_expr).to_list()
         comics_by_num = {row["number"]: row for row in comic_rows}
 
-        order = list(scores)
+        ranking = scores
         if self.reranker is not None:
             documents = {
                 num: f"{comics_by_num[num]['title']}. {texts[num]}"
-                for num in order
+                for num in scores
                 if num in comics_by_num
             }
-            order = self.reranker.order(query, documents)
+            ranking = self.reranker.score(query, documents)
 
+        order = sorted(ranking, key=lambda num: -ranking[num])
         results: list[Comic] = [
-            Comic.from_dict(comics_by_num[num], score=scores[num])
-            for num in order[:k]
+            Comic.from_dict(comics_by_num[num], score=ranking[num])
+            for num in order
             if num in comics_by_num
-        ]
+        ][:k]
 
         return results
 

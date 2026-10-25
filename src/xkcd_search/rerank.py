@@ -13,23 +13,30 @@ RERANK_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
 
 
 class Reranker(Protocol):
-    """Reorders candidate documents by relevance to a query."""
+    """Scores candidate documents against a query."""
 
-    def order(self, query: str, documents: dict[int, str]) -> list[int]:
-        """Return document keys ordered by decreasing relevance."""
+    def score(self, query: str, documents: dict[int, str]) -> dict[int, float]:
+        """Return a relevance score per document key, higher being closer."""
         ...
 
 
 class CrossEncoderReranker:
-    """Orders candidates with a local cross-encoder running on ONNX."""
+    """Scores candidates with a local cross-encoder running on ONNX."""
 
     def __init__(self, model: str = RERANK_MODEL) -> None:
-        """Load the cross-encoder model."""
-        self.model = TextCrossEncoder(model_name=model)
+        """Remember the model name; the model itself loads on first score."""
+        self.model_name = model
+        self._model: TextCrossEncoder | None = None
 
-    def order(self, query: str, documents: dict[int, str]) -> list[int]:
-        """Return comic numbers ordered by decreasing relevance."""
+    @property
+    def model(self) -> TextCrossEncoder:
+        """Load the cross-encoder on first use, so import stays cheap."""
+        if self._model is None:
+            self._model = TextCrossEncoder(model_name=self.model_name)
+        return self._model
+
+    def score(self, query: str, documents: dict[int, str]) -> dict[int, float]:
+        """Return a relevance score per comic number."""
         keys = list(documents)
         scores: Iterable[float] = self.model.rerank(query, [documents[k] for k in keys])
-        pairs = zip(keys, scores, strict=True)
-        return [k for k, _ in sorted(pairs, key=lambda pair: -pair[1])]
+        return {k: float(s) for k, s in zip(keys, scores, strict=True)}
