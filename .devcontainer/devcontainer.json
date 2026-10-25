@@ -1,6 +1,3 @@
 {
-	"build": {
-		"dockerfile": "Dockerfile",
-		"context": ".."
-	}
+  "postCreateCommand": "make dev"
 }
