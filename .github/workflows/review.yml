@@ -2,7 +2,7 @@ name: review
 
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, synchronize, ready_for_review]
   issue_comment:
     types: [created]
 
@@ -21,6 +21,7 @@ jobs:
         (contains(github.event.comment.body, '/oc') ||
          contains(github.event.comment.body, '/opencode')))
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
