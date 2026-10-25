@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse
 
 from xkcd_search.index import SearchIndex
+from xkcd_search.rerank import CrossEncoderReranker
 
 if TYPE_CHECKING:
     from starlette.requests import Request
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 DEFAULT_K = 5
 
 mcp = FastMCP("xkcd-search")
-search_index = SearchIndex()
+search_index = SearchIndex(reranker=CrossEncoderReranker())
 
 
 @mcp.tool(name="search")

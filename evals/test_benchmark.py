@@ -9,12 +9,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from xkcd_search.index import SearchIndex
+from xkcd_search.rerank import CrossEncoderReranker
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 DATASET_PATH = Path(__file__).parent / "dataset.json"
-search_index = SearchIndex()
+search_index = SearchIndex(reranker=CrossEncoderReranker())
 
 
 def load_cases() -> list[dict[str, Any]]:
