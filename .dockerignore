@@ -1,0 +1,16 @@
+.git/
+.venv/
+.lance/
+lancedb/
+.eval_lance/
+evals/data/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty_cache/
+.coverage
+htmlcov/
+.DS_Store
