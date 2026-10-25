@@ -21,7 +21,7 @@ jobs:
         (contains(github.event.comment.body, '/oc') ||
          contains(github.event.comment.body, '/opencode')))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -30,6 +30,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENCODE_CONFIG_CONTENT: '{"permission":{"external_directory":"allow","doom_loop":"allow"}}'
         with:
           model: opencode-go/deepseek-v4.1-flash
           use_github_token: true

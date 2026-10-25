@@ -3,6 +3,5 @@
 	"model": "opencode-go/deepseek-v4.1-flash",
 	"websearch": {
 		"provider": "exa"
-	},
-	"permission": "allow"
+	}
 }
