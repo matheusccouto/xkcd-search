@@ -32,6 +32,11 @@ module-name = "xkcd_search"
 [project.scripts]
 xkcd-ingest = "xkcd_search.ingest:main"
 
+[tool.uv]
+# gradio 6.30 caps pillow<13, but pillow 12.x has open security advisories.
+# Remove this override once gradio allows pillow 13.
+override-dependencies = ["pillow>=13.0.0"]
+
 [tool.ruff]
 exclude = [".agents"]
 
