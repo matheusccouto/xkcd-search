@@ -1,0 +1,44 @@
+name: review
+
+# Automatic review when a pull request is opened, plus on demand: comment
+# /oc or /opencode on a pull request to review it (drafts included).
+on:
+  pull_request:
+    types: [opened, ready_for_review] # draft PRs wait until they are marked ready
+  issue_comment:
+    types: [created] # comments on pull requests arrive as issue_comment events
+
+permissions:
+  contents: read
+  pull-requests: read # read the pull request and its diff
+  issues: write # post comments; pull request comments use the issues API
+
+jobs:
+  review:
+    name: Review pull request
+
+    # Pull request path: an opened pull request that is not a draft.
+    # Comment path: the owner, a member or a collaborator comments /oc or
+    # /opencode on a pull request. This path does not check the draft state
+    # because issue_comment payloads do not include it.
+    if: |
+      github.event.pull_request.draft == false ||
+      (github.event.issue.pull_request &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        (contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/opencode')))
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: opencode-go/deepseek-v4.1-flash
+          use_github_token: true
