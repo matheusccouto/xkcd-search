@@ -18,6 +18,10 @@ Live endpoint: `https://couto-xkcd-search.hf.space`
 - **REST API**: `GET /api/search?q={query}&k={count}`
 - **Agent Skill**: `npx skills add matheusccouto/xkcd-search`
 
+## Code review
+
+Pull requests get an automated OpenCode review when they are opened. Comment `/oc` or `/opencode` on a pull request to request one on demand.
+
 ## Development
 
 ```bash
