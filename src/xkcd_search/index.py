@@ -18,8 +18,11 @@ if TYPE_CHECKING:
 
     from lancedb.table import Table
 
+    from xkcd_search.rerank import Reranker
+
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 DEFAULT_LANCE_URI = "hf://datasets/couto/xkcd"
+RERANK_POOL = 50
 
 COMICS_SCHEMA = pa.schema(
     [
@@ -98,12 +101,14 @@ class SearchIndex:
         embedder: TextEmbedder | None = None,
         chunker: Chunker | None = None,
         token: str | None = None,
+        reranker: Reranker | None = None,
     ) -> None:
         """Initialize search index with LanceDB URI, embedder, and chunker."""
         self._uri = uri
         self.token = token or os.getenv("HF_TOKEN")
         self.embedder = embedder or HuggingFaceEmbedder(token=self.token)
         self.chunker = chunker or FixedWindowChunker()
+        self.reranker = reranker
 
     @property
     def uri(self) -> str:
@@ -135,28 +140,42 @@ class SearchIndex:
         if "comics" not in existing_tables or "chunks" not in existing_tables:
             return []
 
+        pool = RERANK_POOL if self.reranker is not None else k
         query_vec = self.embedder.embed(query)
-        chunks_results = self.chunks_table.search(query_vec).limit(k * 4).to_list()
+        chunks_results = self.chunks_table.search(query_vec).limit(pool * 4).to_list()
         if not chunks_results:
             return []
 
         scores: dict[int, float] = {}
+        texts: dict[int, str] = {}
         for row in chunks_results:
             c_num = row["comic_number"]
             if c_num not in scores:
                 dist = float(row["_distance"])
                 scores[c_num] = 1.0 / (1.0 + dist)
-            if len(scores) == k:
+                texts[c_num] = row["text"]
+            if len(scores) == pool:
                 break
 
         filter_expr = f"number in ({','.join(str(n) for n in scores)})"
         comic_rows = self.comics_table.search().where(filter_expr).to_list()
         comics_by_num = {row["number"]: row for row in comic_rows}
 
-        results: list[Comic] = []
-        for num, score in scores.items():
-            if num in comics_by_num:
-                results.append(Comic.from_dict(comics_by_num[num], score=score))
+        ranking = scores
+        if self.reranker is not None:
+            documents = {
+                num: f"{comics_by_num[num]['title']}. {texts[num]}"
+                for num in scores
+                if num in comics_by_num
+            }
+            ranking = self.reranker.score(query, documents)
+
+        order = sorted(ranking, key=lambda num: -ranking[num])
+        results: list[Comic] = [
+            Comic.from_dict(comics_by_num[num], score=ranking[num])
+            for num in order
+            if num in comics_by_num
+        ][:k]
 
         return results
 
