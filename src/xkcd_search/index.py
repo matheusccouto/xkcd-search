@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from functools import cached_property
 from typing import TYPE_CHECKING, Protocol
 
 import lancedb
@@ -109,7 +110,7 @@ class SearchIndex:
         """Resolve dataset URI from parameter or environment variable."""
         return str(self._uri or os.getenv("XKCD_DATASET_URI", DEFAULT_LANCE_URI))
 
-    @property
+    @cached_property
     def db(self) -> lancedb.DBConnection:
         """Connect to LanceDB storage."""
         storage_options = {"token": self.token} if self.token else None
